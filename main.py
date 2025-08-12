@@ -1,0 +1,576 @@
+from flask import Flask, render_template, request, jsonify
+import requests
+import json
+from datetime import datetime, timedelta
+import os
+
+app = Flask(__name__)
+
+# Alpha Vantage API for stock data (free tier available)
+ALPHA_VANTAGE_API_KEY = "demo"  # Replace with your API key
+ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
+
+# OpenAI-style API for AI insights (you can use OpenAI, Groq, or other providers)
+AI_API_KEY = os.getenv("AI_API_KEY", "")  # Set this in Secrets
+
+def get_stock_data(symbol):
+    """Fetch real-time stock data"""
+    try:
+        params = {
+            'function': 'GLOBAL_QUOTE',
+            'symbol': symbol,
+            'apikey': ALPHA_VANTAGE_API_KEY
+        }
+
+        response = requests.get(ALPHA_VANTAGE_URL, params=params, timeout=10)
+        data = response.json()
+
+        if "Global Quote" in data:
+            quote = data["Global Quote"]
+            return {
+                'symbol': quote.get('01. symbol', symbol),
+                'price': float(quote.get('05. price', 0)),
+                'change': float(quote.get('09. change', 0)),
+                'change_percent': quote.get('10. change percent', '0%'),
+                'volume': int(quote.get('06. volume', 0)),
+                'last_updated': quote.get('07. latest trading day', '')
+            }
+        else:
+            # Fallback demo data
+            return {
+                'symbol': symbol.upper(),
+                'price': 150.25,
+                'change': 2.15,
+                'change_percent': '+1.45%',
+                'volume': 1250000,
+                'last_updated': datetime.now().strftime('%Y-%m-%d')
+            }
+    except Exception as e:
+        print(f"Error fetching stock data: {e}")
+        return None
+
+def get_stock_fundamentals(symbol):
+    """Fetch stock fundamentals data"""
+    try:
+        params = {
+            'function': 'OVERVIEW',
+            'symbol': symbol,
+            'apikey': ALPHA_VANTAGE_API_KEY
+        }
+
+        response = requests.get(ALPHA_VANTAGE_URL, params=params, timeout=10)
+        data = response.json()
+
+        if 'Symbol' in data and data['Symbol']:
+            return {
+                'market_cap': data.get('MarketCapitalization', 'N/A'),
+                'pe_ratio': data.get('PERatio', 'N/A'),
+                'peg_ratio': data.get('PEGRatio', 'N/A'),
+                'dividend_yield': data.get('DividendYield', 'N/A'),
+                'eps': data.get('EPS', 'N/A'),
+                'beta': data.get('Beta', 'N/A'),
+                '52_week_high': data.get('52WeekHigh', 'N/A'),
+                '52_week_low': data.get('52WeekLow', 'N/A'),
+                'analyst_target': data.get('AnalystTargetPrice', 'N/A'),
+                'sector': data.get('Sector', 'N/A'),
+                'industry': data.get('Industry', 'N/A')
+            }
+        else:
+            # Demo fundamentals data
+            import random
+            return {
+                'market_cap': f"{random.randint(10, 2000)}B",
+                'pe_ratio': f"{random.uniform(15, 35):.2f}",
+                'peg_ratio': f"{random.uniform(0.5, 2.5):.2f}",
+                'dividend_yield': f"{random.uniform(0, 5):.2f}%",
+                'eps': f"{random.uniform(2, 15):.2f}",
+                'beta': f"{random.uniform(0.5, 2.0):.2f}",
+                '52_week_high': f"{random.uniform(180, 250):.2f}",
+                '52_week_low': f"{random.uniform(100, 150):.2f}",
+                'analyst_target': f"{random.uniform(160, 200):.2f}",
+                'sector': random.choice(['Technology', 'Healthcare', 'Finance', 'Energy']),
+                'industry': random.choice(['Software', 'Biotechnology', 'Banking', 'Oil & Gas'])
+            }
+    except Exception as e:
+        print(f"Error fetching fundamentals: {e}")
+        return None
+
+def get_trending_stocks():
+    """Get trending/hottest stocks with demo data"""
+    # In a real app, you'd fetch this from financial data APIs
+    trending_stocks = [
+        {
+            'symbol': 'AAPL',
+            'name': 'Apple Inc.',
+            'price': 175.84,
+            'change': 5.23,
+            'change_percent': '+3.07%',
+            'volume': 45000000,
+            'market_cap': '2.74T',
+            'pe_ratio': '28.5',
+            'sector': 'Technology'
+        },
+        {
+            'symbol': 'NVDA',
+            'name': 'NVIDIA Corporation',
+            'price': 438.12,
+            'change': 12.45,
+            'change_percent': '+2.93%',
+            'volume': 32000000,
+            'market_cap': '1.08T',
+            'pe_ratio': '65.2',
+            'sector': 'Technology'
+        },
+        {
+            'symbol': 'TSLA',
+            'name': 'Tesla Inc.',
+            'price': 252.48,
+            'change': -3.21,
+            'change_percent': '-1.26%',
+            'volume': 89000000,
+            'market_cap': '804B',
+            'pe_ratio': '47.8',
+            'sector': 'Consumer Cyclical'
+        },
+        {
+            'symbol': 'MSFT',
+            'name': 'Microsoft Corporation',
+            'price': 415.26,
+            'change': 8.92,
+            'change_percent': '+2.20%',
+            'volume': 28000000,
+            'market_cap': '3.09T',
+            'pe_ratio': '34.1',
+            'sector': 'Technology'
+        },
+        {
+            'symbol': 'GOOGL',
+            'name': 'Alphabet Inc.',
+            'price': 164.87,
+            'change': 2.15,
+            'change_percent': '+1.32%',
+            'volume': 25000000,
+            'market_cap': '2.03T',
+            'pe_ratio': '24.7',
+            'sector': 'Communication Services'
+        },
+        {
+            'symbol': 'AMZN',
+            'name': 'Amazon.com Inc.',
+            'price': 145.63,
+            'change': -1.87,
+            'change_percent': '-1.27%',
+            'volume': 41000000,
+            'market_cap': '1.52T',
+            'pe_ratio': '45.3',
+            'sector': 'Consumer Cyclical'
+        }
+    ]
+
+    return trending_stocks
+
+def get_market_movers():
+    """Get daily market movers - biggest gainers and losers"""
+    import random
+
+    # Generate realistic market movers data
+    gainers = []
+    losers = []
+
+    # Top gainers
+    gainer_symbols = ['MRNA', 'RIOT', 'AMC', 'GME', 'PLTR', 'PLUG', 'BBBY', 'WISH', 'CLOV', 'SPCE']
+    gainer_names = [
+        'Moderna Inc.', 'Riot Platforms', 'AMC Entertainment', 'GameStop Corp.', 'Palantir Technologies',
+        'Plug Power Inc.', 'Bed Bath & Beyond', 'ContextLogic Inc.', 'Clover Health', 'Virgin Galactic'
+    ]
+
+    # Add more symbols and names for 20 gainers
+    gainer_symbols = ['MRNA', 'RIOT', 'AMC', 'GME', 'PLTR', 'PLUG', 'BBBY', 'WISH', 'CLOV', 'SPCE',
+                     'TLRY', 'SNDL', 'BB', 'NOK', 'MVIS', 'FUBO', 'WORX', 'IDEX', 'GNUS', 'XSPA']
+    gainer_names = [
+        'Moderna Inc.', 'Riot Platforms', 'AMC Entertainment', 'GameStop Corp.', 'Palantir Technologies',
+        'Plug Power Inc.', 'Bed Bath & Beyond', 'ContextLogic Inc.', 'Clover Health', 'Virgin Galactic',
+        'Tilray Inc.', 'Sundial Growers', 'BlackBerry Ltd.', 'Nokia Corp.', 'MicroVision Inc.',
+        'fuboTV Inc.', 'SCWorx Corp.', 'Ideanomics Inc.', 'Genius Brands', 'XpresSpa Group'
+    ]
+
+    for i in range(20):
+        change_percent = random.uniform(8, 25)
+        price = random.uniform(5, 200)
+        change = price * (change_percent / 100)
+        gainers.append({
+            'symbol': gainer_symbols[i],
+            'name': gainer_names[i],
+            'price': round(price, 2),
+            'change': round(change, 2),
+            'change_percent': f'+{change_percent:.2f}%',
+            'volume': random.randint(5000000, 50000000),
+            'market_cap': f"{random.randint(1, 50)}B",
+            'sector': random.choice(['Technology', 'Healthcare', 'Entertainment', 'Energy'])
+        })
+
+    # Top losers
+    loser_symbols = ['NFLX', 'SNAP', 'COIN', 'HOOD', 'ROKU', 'ZOOM', 'PTON', 'UBER', 'LYFT', 'ABNB',
+                    'TWTR', 'SPOT', 'SQ', 'SHOP', 'DOCU', 'ZM', 'WORK', 'PINS', 'DKNG', 'CRWD']
+    loser_names = [
+        'Netflix Inc.', 'Snap Inc.', 'Coinbase Global', 'Robinhood Markets', 'Roku Inc.',
+        'Zoom Video', 'Peloton Interactive', 'Uber Technologies', 'Lyft Inc.', 'Airbnb Inc.',
+        'Twitter Inc.', 'Spotify Technology', 'Block Inc.', 'Shopify Inc.', 'DocuSign Inc.',
+        'Zoom Video Communications', 'Slack Technologies', 'Pinterest Inc.', 'DraftKings Inc.', 'CrowdStrike Holdings'
+    ]
+
+    for i in range(20):
+        change_percent = random.uniform(-20, -5)
+        price = random.uniform(10, 300)
+        change = price * (change_percent / 100)
+        losers.append({
+            'symbol': loser_symbols[i],
+            'name': loser_names[i],
+            'price': round(price, 2),
+            'change': round(change, 2),
+            'change_percent': f'{change_percent:.2f}%',
+            'volume': random.randint(3000000, 40000000),
+            'market_cap': f"{random.randint(5, 200)}B",
+            'sector': random.choice(['Technology', 'Communication Services', 'Consumer Cyclical', 'Financial Services'])
+        })
+
+    return {
+        'gainers': gainers,
+        'losers': losers
+    }
+
+def get_exchange_data():
+    """Get stocks by exchange (NYSE, NASDAQ, AMEX)"""
+    import random
+
+    exchanges = {
+        'NYSE': {
+            'name': 'New York Stock Exchange',
+            'stocks': []
+        },
+        'NASDAQ': {
+            'name': 'NASDAQ',
+            'stocks': []
+        },
+        'AMEX': {
+            'name': 'American Stock Exchange',
+            'stocks': []
+        }
+    }
+
+    # NYSE stocks
+    nyse_stocks = [
+        {'symbol': 'JPM', 'name': 'JPMorgan Chase & Co.'},
+        {'symbol': 'JNJ', 'name': 'Johnson & Johnson'},
+        {'symbol': 'WMT', 'name': 'Walmart Inc.'},
+        {'symbol': 'PG', 'name': 'Procter & Gamble Co.'},
+        {'symbol': 'V', 'name': 'Visa Inc.'},
+        {'symbol': 'HD', 'name': 'Home Depot Inc.'},
+        {'symbol': 'MA', 'name': 'Mastercard Inc.'},
+        {'symbol': 'BAC', 'name': 'Bank of America Corp.'},
+        {'symbol': 'DIS', 'name': 'Walt Disney Co.'},
+        {'symbol': 'ADBE', 'name': 'Adobe Inc.'},
+        {'symbol': 'XOM', 'name': 'Exxon Mobil Corp.'},
+        {'symbol': 'KO', 'name': 'Coca-Cola Co.'},
+        {'symbol': 'PFE', 'name': 'Pfizer Inc.'},
+        {'symbol': 'CVX', 'name': 'Chevron Corp.'},
+        {'symbol': 'WFC', 'name': 'Wells Fargo & Co.'},
+        {'symbol': 'T', 'name': 'AT&T Inc.'},
+        {'symbol': 'VZ', 'name': 'Verizon Communications'},
+        {'symbol': 'IBM', 'name': 'International Business Machines'},
+        {'symbol': 'GE', 'name': 'General Electric Co.'},
+        {'symbol': 'MRK', 'name': 'Merck & Co. Inc.'}
+    ]
+
+    # NASDAQ stocks
+    nasdaq_stocks = [
+        {'symbol': 'AAPL', 'name': 'Apple Inc.'},
+        {'symbol': 'MSFT', 'name': 'Microsoft Corp.'},
+        {'symbol': 'GOOGL', 'name': 'Alphabet Inc.'},
+        {'symbol': 'AMZN', 'name': 'Amazon.com Inc.'},
+        {'symbol': 'TSLA', 'name': 'Tesla Inc.'},
+        {'symbol': 'NVDA', 'name': 'NVIDIA Corp.'},
+        {'symbol': 'META', 'name': 'Meta Platforms Inc.'},
+        {'symbol': 'NFLX', 'name': 'Netflix Inc.'},
+        {'symbol': 'PYPL', 'name': 'PayPal Holdings Inc.'},
+        {'symbol': 'INTC', 'name': 'Intel Corp.'},
+        {'symbol': 'ADBE', 'name': 'Adobe Inc.'},
+        {'symbol': 'CRM', 'name': 'Salesforce Inc.'},
+        {'symbol': 'AVGO', 'name': 'Broadcom Inc.'},
+        {'symbol': 'TXN', 'name': 'Texas Instruments Inc.'},
+        {'symbol': 'QCOM', 'name': 'Qualcomm Inc.'},
+        {'symbol': 'COST', 'name': 'Costco Wholesale Corp.'},
+        {'symbol': 'TMUS', 'name': 'T-Mobile US Inc.'},
+        {'symbol': 'CMCSA', 'name': 'Comcast Corp.'},
+        {'symbol': 'PEP', 'name': 'PepsiCo Inc.'},
+        {'symbol': 'AMD', 'name': 'Advanced Micro Devices'}
+    ]
+
+    # AMEX stocks
+    amex_stocks = [
+        {'symbol': 'SPY', 'name': 'SPDR S&P 500 ETF'},
+        {'symbol': 'GLD', 'name': 'SPDR Gold Shares'},
+        {'symbol': 'SLV', 'name': 'iShares Silver Trust'},
+        {'symbol': 'EWJ', 'name': 'iShares MSCI Japan ETF'},
+        {'symbol': 'FXI', 'name': 'iShares China Large-Cap ETF'},
+        {'symbol': 'EEM', 'name': 'iShares MSCI Emerging Markets ETF'},
+        {'symbol': 'IWM', 'name': 'iShares Russell 2000 ETF'},
+        {'symbol': 'QQQ', 'name': 'Invesco QQQ Trust'},
+        {'symbol': 'VTI', 'name': 'Vanguard Total Stock Market ETF'},
+        {'symbol': 'BND', 'name': 'Vanguard Total Bond Market ETF'},
+        {'symbol': 'XLF', 'name': 'Financial Select Sector SPDR'},
+        {'symbol': 'XLK', 'name': 'Technology Select Sector SPDR'},
+        {'symbol': 'XLE', 'name': 'Energy Select Sector SPDR'},
+        {'symbol': 'XLV', 'name': 'Health Care Select Sector SPDR'},
+        {'symbol': 'XLI', 'name': 'Industrial Select Sector SPDR'},
+        {'symbol': 'XLP', 'name': 'Consumer Staples Select Sector SPDR'},
+        {'symbol': 'XLY', 'name': 'Consumer Discretionary Select Sector SPDR'},
+        {'symbol': 'XLU', 'name': 'Utilities Select Sector SPDR'},
+        {'symbol': 'XLB', 'name': 'Materials Select Sector SPDR'},
+        {'symbol': 'XLRE', 'name': 'Real Estate Select Sector SPDR'}
+    ]
+
+    # Generate data for each exchange
+    for stock in nyse_stocks:
+        price = random.uniform(50, 500)
+        change_percent = random.uniform(-5, 5)
+        change = price * (change_percent / 100)
+
+        exchanges['NYSE']['stocks'].append({
+            'symbol': stock['symbol'],
+            'name': stock['name'],
+            'price': round(price, 2),
+            'change': round(change, 2),
+            'change_percent': f'{change_percent:+.2f}%',
+            'volume': random.randint(1000000, 20000000),
+            'market_cap': f"{random.randint(10, 500)}B",
+            'sector': random.choice(['Financial Services', 'Healthcare', 'Consumer Defensive', 'Technology'])
+        })
+
+    for stock in nasdaq_stocks:
+        price = random.uniform(100, 800)
+        change_percent = random.uniform(-5, 5)
+        change = price * (change_percent / 100)
+
+        exchanges['NASDAQ']['stocks'].append({
+            'symbol': stock['symbol'],
+            'name': stock['name'],
+            'price': round(price, 2),
+            'change': round(change, 2),
+            'change_percent': f'{change_percent:+.2f}%',
+            'volume': random.randint(5000000, 50000000),
+            'market_cap': f"{random.randint(50, 3000)}B",
+            'sector': random.choice(['Technology', 'Communication Services', 'Consumer Cyclical'])
+        })
+
+    for stock in amex_stocks:
+        price = random.uniform(20, 300)
+        change_percent = random.uniform(-3, 3)
+        change = price * (change_percent / 100)
+
+        exchanges['AMEX']['stocks'].append({
+            'symbol': stock['symbol'],
+            'name': stock['name'],
+            'price': round(price, 2),
+            'change': round(change, 2),
+            'change_percent': f'{change_percent:+.2f}%',
+            'volume': random.randint(500000, 10000000),
+            'market_cap': f"{random.randint(1, 100)}B",
+            'sector': random.choice(['ETF', 'Financial Services', 'Commodities'])
+        })
+
+    return exchanges
+
+def get_historical_data(symbol):
+    """Fetch 6-month historical stock data"""
+    try:
+        params = {
+            'function': 'TIME_SERIES_DAILY',
+            'symbol': symbol,
+            'outputsize': 'full',
+            'apikey': ALPHA_VANTAGE_API_KEY
+        }
+
+        response = requests.get(ALPHA_VANTAGE_URL, params=params, timeout=10)
+        data = response.json()
+
+        if "Time Series (Daily)" in data:
+            time_series = data["Time Series (Daily)"]
+            # Get last 6 months of data (approximately 126 trading days)
+            sorted_dates = sorted(time_series.keys(), reverse=True)[:126]
+
+            historical_data = []
+            for date in reversed(sorted_dates):  # Reverse to get chronological order
+                day_data = time_series[date]
+                historical_data.append({
+                    'date': date,
+                    'open': float(day_data['1. open']),
+                    'high': float(day_data['2. high']),
+                    'low': float(day_data['3. low']),
+                    'close': float(day_data['4. close']),
+                    'volume': int(day_data['5. volume'])
+                })
+
+            return historical_data
+        else:
+            # Generate demo historical data
+            import random
+            from datetime import datetime, timedelta
+
+            historical_data = []
+            base_price = 150.0
+            current_date = datetime.now() - timedelta(days=180)
+
+            for i in range(126):  # 6 months of trading days
+                # Skip weekends
+                while current_date.weekday() >= 5:
+                    current_date += timedelta(days=1)
+
+                # Random price movement
+                change = random.uniform(-0.05, 0.05)
+                base_price = max(base_price * (1 + change), 10)  # Don't go below $10
+
+                daily_volatility = base_price * 0.02
+                high = base_price + random.uniform(0, daily_volatility)
+                low = base_price - random.uniform(0, daily_volatility)
+                open_price = low + random.uniform(0, high - low)
+                close_price = low + random.uniform(0, high - low)
+
+                historical_data.append({
+                    'date': current_date.strftime('%Y-%m-%d'),
+                    'open': round(open_price, 2),
+                    'high': round(high, 2),
+                    'low': round(low, 2),
+                    'close': round(close_price, 2),
+                    'volume': random.randint(500000, 5000000)
+                })
+
+                current_date += timedelta(days=1)
+
+            return historical_data
+
+    except Exception as e:
+        print(f"Error fetching historical data: {e}")
+        return None
+
+def get_ai_insights(stock_data):
+    """Generate AI-powered insights about the stock"""
+    if not stock_data:
+        return "Unable to generate insights - no stock data available."
+
+    # Simple rule-based insights (you can replace this with actual AI API calls)
+    price = stock_data['price']
+    change = stock_data['change']
+    change_percent = float(stock_data['change_percent'].replace('%', '').replace('+', ''))
+
+    insights = []
+
+    if change > 0:
+        if change_percent > 5:
+            insights.append("🚀 Strong upward momentum! The stock is showing significant gains today.")
+        elif change_percent > 2:
+            insights.append("📈 Positive trend observed. The stock is performing well.")
+        else:
+            insights.append("✅ Mild positive movement. Steady growth pattern.")
+    elif change < 0:
+        if change_percent < -5:
+            insights.append("⚠️ Significant decline detected. Consider reviewing your position.")
+        elif change_percent < -2:
+            insights.append("📉 Negative trend. Monitor closely for further developments.")
+        else:
+            insights.append("🔄 Minor decline. Normal market fluctuation.")
+    else:
+        insights.append("➡️ Stable price action. The stock is trading sideways.")
+
+    # Volume analysis
+    if stock_data['volume'] > 1000000:
+        insights.append("📊 High trading volume indicates strong investor interest.")
+
+    # Price level analysis
+    if price > 200:
+        insights.append("💎 Premium stock price range. Quality company indicator.")
+    elif price < 50:
+        insights.append("💰 Affordable entry point for potential growth.")
+
+    return " ".join(insights)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/api/stock/<symbol>')
+def get_stock_info(symbol):
+    """API endpoint to get stock data and AI insights"""
+    stock_data = get_stock_data(symbol)
+    if not stock_data:
+        return jsonify({'error': 'Unable to fetch stock data'}), 400
+
+    fundamentals = get_stock_fundamentals(symbol)
+    ai_insights = get_ai_insights(stock_data)
+
+    return jsonify({
+        'stock_data': stock_data,
+        'fundamentals': fundamentals,
+        'ai_insights': ai_insights,
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/api/trending')
+def get_trending():
+    """API endpoint to get trending stocks"""
+    trending = get_trending_stocks()
+    return jsonify({
+        'trending_stocks': trending,
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/api/market-movers')
+def get_market_movers_api():
+    """API endpoint to get daily market movers"""
+    movers = get_market_movers()
+    return jsonify({
+        'market_movers': movers,
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/api/exchanges')
+def get_exchanges_api():
+    """API endpoint to get stocks by exchange"""
+    exchanges = get_exchange_data()
+    return jsonify({
+        'exchanges': exchanges,
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/stock/<symbol>')
+def stock_detail(symbol):
+    """Stock detail page with historical data"""
+    return render_template('stock_detail.html', symbol=symbol.upper())
+
+@app.route('/api/stock/<symbol>/historical')
+def get_historical_stock_data(symbol):
+    """API endpoint to get historical stock data"""
+    historical_data = get_historical_data(symbol)
+    if not historical_data:
+        return jsonify({'error': 'Unable to fetch historical data'}), 400
+
+    return jsonify({
+        'symbol': symbol.upper(),
+        'historical_data': historical_data,
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/api/watchlist', methods=['POST'])
+def add_to_watchlist():
+    """Add stock to watchlist (simple in-memory storage)"""
+    data = request.get_json()
+    symbol = data.get('symbol', '').upper()
+
+    if not symbol:
+        return jsonify({'error': 'Symbol required'}), 400
+
+    # In a real app, you'd store this in a database
+    return jsonify({'message': f'{symbol} added to watchlist', 'symbol': symbol})
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
