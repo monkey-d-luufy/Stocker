@@ -8,46 +8,53 @@ app = Flask(__name__)
 
 # Alpha Vantage API for stock data (free tier available)
 ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY", "")  # Replace with your API key
+
+print(f"DEBUG: Alpha Vantage API key is set: {bool(ALPHA_VANTAGE_API_KEY)}")
+
 ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
 
 # OpenAI-style API for AI insights (you can use OpenAI, Groq, or other providers)
 AI_API_KEY = os.getenv("AI_API_KEY", "")  # Set this in Secrets
 
 def get_stock_data(symbol):
-    """Fetch real-time stock data"""
+    if not ALPHA_VANTAGE_API_KEY:
+        print("ERROR: API key not configured")
+        return {'error': 'API key not configured'}
+
     try:
         params = {
             'function': 'GLOBAL_QUOTE',
             'symbol': symbol,
             'apikey': ALPHA_VANTAGE_API_KEY
         }
-
         response = requests.get(ALPHA_VANTAGE_URL, params=params, timeout=10)
         data = response.json()
 
-        if "Global Quote" in data:
+        if "Note" in data:
+            print("ERROR: API call frequency limit reached")
+            return {'error': 'API call frequency limit reached'}
+
+        if "Global Quote" in data and data["Global Quote"]:
             quote = data["Global Quote"]
+            price_str = quote.get('05. price', None)
+            if price_str is None:
+                print("ERROR: Price data missing")
+                return {'error': 'Price data missing'}
+
             return {
                 'symbol': quote.get('01. symbol', symbol),
-                'price': float(quote.get('05. price', 0)),
+                'price': float(price_str),
                 'change': float(quote.get('09. change', 0)),
                 'change_percent': quote.get('10. change percent', '0%'),
                 'volume': int(quote.get('06. volume', 0)),
                 'last_updated': quote.get('07. latest trading day', '')
             }
         else:
-            # Fallback demo data
-            return {
-                'symbol': symbol.upper(),
-                'price': 150.25,
-                'change': 2.15,
-                'change_percent': '+1.45%',
-                'volume': 1250000,
-                'last_updated': datetime.now().strftime('%Y-%m-%d')
-            }
+            print(f"ERROR: No data found for symbol: {symbol}")
+            return {'error': 'No data found for symbol'}
     except Exception as e:
-        print(f"Error fetching stock data: {e}")
-        return None
+        print(f"ERROR: Exception fetching stock data: {e}")
+        return {'error': f"Exception: {e}"}
 
 def get_stock_fundamentals(symbol):
     """Fetch stock fundamentals data"""
