@@ -508,9 +508,9 @@ def index():
 @app.route('/api/stock/<symbol>')
 def get_stock_info(symbol):
     """API endpoint to get stock data and AI insights"""
-stock_data = get_stock_data(symbol)
-if 'error' in stock_data:
-    return jsonify({'error': stock_data['error']}), 400
+    stock_data = get_stock_data(symbol)
+    if 'error' in stock_data:
+        return jsonify({'error': stock_data['error']}), 400
 
     fundamentals = get_stock_fundamentals(symbol)
     ai_insights = get_ai_insights(stock_data)
