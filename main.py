@@ -7,7 +7,7 @@ import os
 app = Flask(__name__)
 
 # Alpha Vantage API for stock data (free tier available)
-ALPHA_VANTAGE_API_KEY = "demo"  # Replace with your API key
+ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY", "")  # Replace with your API key
 ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
 
 # OpenAI-style API for AI insights (you can use OpenAI, Groq, or other providers)
