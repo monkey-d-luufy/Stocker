@@ -114,6 +114,31 @@ def get_stock_info(symbol):
         'ai_insights': ai_insights,
         'timestamp': datetime.now().isoformat()
     })
+# ------------------------
+# Predefined popular stocks
+# ------------------------
+POPULAR_STOCKS = ['AAPL', 'MSFT', 'TSLA', 'NVDA', 'AMZN', 'GOOGL', 'META']
+
+# ------------------------
+# Trending Stocks Endpoint
+# ------------------------
+@app.route('/api/trending')
+def get_trending():
+    trending = []
+    for symbol in POPULAR_STOCKS:
+        stock = get_stock_data(symbol)
+        if 'error' not in stock:
+            trending.append({
+                'symbol': stock['symbol'],
+                'price': stock['price'],
+                'change': stock['change'],
+                'change_percent': stock['change_percent'],
+                'volume': stock['volume'],
+            })
+    return jsonify({
+        'trending_stocks': trending,
+        'timestamp': datetime.now().isoformat()
+    })
 
 # ------------------------
 # Main
