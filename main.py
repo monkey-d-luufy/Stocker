@@ -20,89 +20,49 @@ ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
 AI_API_KEY = os.getenv("AI_API_KEY", "")  # Set this in Secrets
 
 def get_stock_data(symbol):
-    """Fetch stock price data from Alpha Vantage with debug logging"""
-    print(f"DEBUG: Requesting Alpha Vantage with symbol={symbol} and key={ALPHA_VANTAGE_API_KEY[:5]}...")
-
-    params = {
-        "function": "TIME_SERIES_INTRADAY",
-        "symbol": symbol,
-        "interval": "5min",
-        "apikey": ALPHA_VANTAGE_API_KEY
-    }
-
+    """Fetch stock price and basic info using Yahoo Finance (no API key needed)"""
     try:
-        response = requests.get(ALPHA_VANTAGE_URL, params=params)
-        print(f"DEBUG: Alpha Vantage HTTP status = {response.status_code}")
-        
-        data = response.json()
-        print(f"DEBUG: Alpha Vantage raw response: {json.dumps(data)[:300]}...")  # First 300 chars only
+        stock = yf.Ticker(symbol)
+        hist = stock.history(period="1d")
 
-        if "Error Message" in data:
-            return {"error": f"Invalid symbol or API call failed: {data['Error Message']}"}
-        if "Note" in data:
-            return {"error": f"Alpha Vantage rate limit hit: {data['Note']}"}
+        if hist.empty:
+            return {"error": f"No data found for {symbol}"}
 
-        # Extract the most recent stock price
-        time_series = data.get("Time Series (5min)", {})
-        if not time_series:
-            return {"error": "No time series data found."}
+        latest_price = hist["Close"].iloc[-1]
+        previous_close = hist["Close"].iloc[-2] if len(hist) > 1 else None
 
-        latest_time = sorted(time_series.keys())[-1]
-        latest_data = time_series[latest_time]
-        
         return {
-            "symbol": symbol,
-            "price": latest_data["4. close"],
-            "timestamp": latest_time
+            "symbol": symbol.upper(),
+            "price": round(float(latest_price), 2),
+            "previous_close": round(float(previous_close), 2) if previous_close else None,
+            "currency": stock.info.get("currency", "USD"),
+            "name": stock.info.get("shortName", symbol)
         }
     except Exception as e:
         return {"error": str(e)}
         
 def get_stock_fundamentals(symbol):
-    """Fetch stock fundamentals data"""
+    """Fetch stock fundamentals data using Yahoo Finance"""
     try:
-        params = {
-            'function': 'OVERVIEW',
-            'symbol': symbol,
-            'apikey': ALPHA_VANTAGE_API_KEY
+        stock = yf.Ticker(symbol)
+        info = stock.info
+
+        return {
+            'market_cap': info.get('marketCap', 'N/A'),
+            'pe_ratio': info.get('trailingPE', 'N/A'),
+            'peg_ratio': info.get('pegRatio', 'N/A'),
+            'dividend_yield': info.get('dividendYield', 'N/A'),
+            'eps': info.get('trailingEps', 'N/A'),
+            'beta': info.get('beta', 'N/A'),
+            '52_week_high': info.get('fiftyTwoWeekHigh', 'N/A'),
+            '52_week_low': info.get('fiftyTwoWeekLow', 'N/A'),
+            'analyst_target': info.get('targetMeanPrice', 'N/A'),
+            'sector': info.get('sector', 'N/A'),
+            'industry': info.get('industry', 'N/A')
         }
 
-        response = requests.get(ALPHA_VANTAGE_URL, params=params, timeout=10)
-        data = response.json()
-
-        if 'Symbol' in data and data['Symbol']:
-            return {
-                'market_cap': data.get('MarketCapitalization', 'N/A'),
-                'pe_ratio': data.get('PERatio', 'N/A'),
-                'peg_ratio': data.get('PEGRatio', 'N/A'),
-                'dividend_yield': data.get('DividendYield', 'N/A'),
-                'eps': data.get('EPS', 'N/A'),
-                'beta': data.get('Beta', 'N/A'),
-                '52_week_high': data.get('52WeekHigh', 'N/A'),
-                '52_week_low': data.get('52WeekLow', 'N/A'),
-                'analyst_target': data.get('AnalystTargetPrice', 'N/A'),
-                'sector': data.get('Sector', 'N/A'),
-                'industry': data.get('Industry', 'N/A')
-            }
-        else:
-            # Demo fundamentals data
-            import random
-            return {
-                'market_cap': f"{random.randint(10, 2000)}B",
-                'pe_ratio': f"{random.uniform(15, 35):.2f}",
-                'peg_ratio': f"{random.uniform(0.5, 2.5):.2f}",
-                'dividend_yield': f"{random.uniform(0, 5):.2f}%",
-                'eps': f"{random.uniform(2, 15):.2f}",
-                'beta': f"{random.uniform(0.5, 2.0):.2f}",
-                '52_week_high': f"{random.uniform(180, 250):.2f}",
-                '52_week_low': f"{random.uniform(100, 150):.2f}",
-                'analyst_target': f"{random.uniform(160, 200):.2f}",
-                'sector': random.choice(['Technology', 'Healthcare', 'Finance', 'Energy']),
-                'industry': random.choice(['Software', 'Biotechnology', 'Banking', 'Oil & Gas'])
-            }
     except Exception as e:
-        print(f"Error fetching fundamentals: {e}")
-        return None
+        return {'error': str(e)}
 
 def get_trending_stocks():
     """Get trending/hottest stocks with demo data"""
