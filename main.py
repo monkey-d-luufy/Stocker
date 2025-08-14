@@ -17,45 +17,44 @@ ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
 AI_API_KEY = os.getenv("AI_API_KEY", "")  # Set this in Secrets
 
 def get_stock_data(symbol):
-    if not ALPHA_VANTAGE_API_KEY:
-        print("ERROR: API key not configured")
-        return {'error': 'API key not configured'}
+    """Fetch stock price data from Alpha Vantage with debug logging"""
+    print(f"DEBUG: Requesting Alpha Vantage with symbol={symbol} and key={ALPHA_VANTAGE_API_KEY[:5]}...")
+
+    params = {
+        "function": "TIME_SERIES_INTRADAY",
+        "symbol": symbol,
+        "interval": "5min",
+        "apikey": ALPHA_VANTAGE_API_KEY
+    }
 
     try:
-        params = {
-            'function': 'GLOBAL_QUOTE',
-            'symbol': symbol,
-            'apikey': ALPHA_VANTAGE_API_KEY
-        }
-        response = requests.get(ALPHA_VANTAGE_URL, params=params, timeout=10)
+        response = requests.get(ALPHA_VANTAGE_URL, params=params)
+        print(f"DEBUG: Alpha Vantage HTTP status = {response.status_code}")
+        
         data = response.json()
+        print(f"DEBUG: Alpha Vantage raw response: {json.dumps(data)[:300]}...")  # First 300 chars only
 
+        if "Error Message" in data:
+            return {"error": f"Invalid symbol or API call failed: {data['Error Message']}"}
         if "Note" in data:
-            print("ERROR: API call frequency limit reached")
-            return {'error': 'API call frequency limit reached'}
+            return {"error": f"Alpha Vantage rate limit hit: {data['Note']}"}
 
-        if "Global Quote" in data and data["Global Quote"]:
-            quote = data["Global Quote"]
-            price_str = quote.get('05. price', None)
-            if price_str is None:
-                print("ERROR: Price data missing")
-                return {'error': 'Price data missing'}
+        # Extract the most recent stock price
+        time_series = data.get("Time Series (5min)", {})
+        if not time_series:
+            return {"error": "No time series data found."}
 
-            return {
-                'symbol': quote.get('01. symbol', symbol),
-                'price': float(price_str),
-                'change': float(quote.get('09. change', 0)),
-                'change_percent': quote.get('10. change percent', '0%'),
-                'volume': int(quote.get('06. volume', 0)),
-                'last_updated': quote.get('07. latest trading day', '')
-            }
-        else:
-            print(f"ERROR: No data found for symbol: {symbol}")
-            return {'error': 'No data found for symbol'}
+        latest_time = sorted(time_series.keys())[-1]
+        latest_data = time_series[latest_time]
+        
+        return {
+            "symbol": symbol,
+            "price": latest_data["4. close"],
+            "timestamp": latest_time
+        }
     except Exception as e:
-        print(f"ERROR: Exception fetching stock data: {e}")
-        return {'error': f"Exception: {e}"}
-
+        return {"error": str(e)}
+        
 def get_stock_fundamentals(symbol):
     """Fetch stock fundamentals data"""
     try:
