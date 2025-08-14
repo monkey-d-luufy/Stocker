@@ -1,8 +1,11 @@
 from flask import Flask, render_template, request, jsonify
-import requests
+import os
 import json
 from datetime import datetime, timedelta
-import os
+import requests
+
+# Third-party libraries
+import yfinance as yf
 
 app = Flask(__name__)
 
