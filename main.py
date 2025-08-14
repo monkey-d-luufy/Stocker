@@ -507,8 +507,13 @@ def index():
 @app.route('/api/stock/<symbol>')
 def get_stock_info(symbol):
     """API endpoint to get stock data and AI insights"""
+    print(f"DEBUG: /api/stock called with symbol={symbol}")
+
     stock_data = get_stock_data(symbol)
+    print(f"DEBUG: stock_data result = {stock_data}")
+
     if 'error' in stock_data:
+        print(f"DEBUG: Returning error for symbol={symbol}")
         return jsonify({'error': stock_data['error']}), 400
 
     fundamentals = get_stock_fundamentals(symbol)
