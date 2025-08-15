@@ -477,14 +477,37 @@ def get_stock_info(symbol):
     })
 
 @app.route('/api/trending')
-def get_trending():
-    """API endpoint to get trending stocks"""
-    trending = get_trending_stocks()
-    return jsonify({
-        'trending_stocks': trending,
-        'timestamp': datetime.now().isoformat()
-    })
+def get_trending_stocks():
+    try:
+        trending_tickers = ["AAPL", "MSFT", "TSLA", "NVDA", "AMZN"]  # Pick your own list
+        trending_data = []
 
+        for ticker in trending_tickers:
+            stock = yf.Ticker(ticker)
+            info = stock.info
+
+            price = info.get("regularMarketPrice")
+            previous_close = info.get("regularMarketPreviousClose")
+
+            if price is not None and previous_close is not None:
+                change = price - previous_close
+                change_percent = (change / previous_close) * 100
+            else:
+                change = None
+                change_percent = None
+
+            trending_data.append({
+                "symbol": ticker,
+                "price": round(price, 2) if price else None,
+                "change": round(change, 2) if change else None,
+                "change_percent": f"{round(change_percent, 2)}%" if change_percent else None
+            })
+
+        return jsonify({"trending_stocks": trending_data})
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+        
 @app.route('/api/market-movers')
 def get_market_movers_api():
     """API endpoint to get daily market movers"""
