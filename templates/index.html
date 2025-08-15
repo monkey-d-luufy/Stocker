@@ -1171,21 +1171,28 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .then(data => {
             const stocks = data.trending_stocks; // ✅ match backend key
-            const container = document.getElementById("trending-stocks");
+           const container = document.getElementById("trendingStocks");
 
             container.innerHTML = ""; // clear before rendering
             stocks.forEach(stock => {
-                const row = document.createElement("div");
-                row.className = "stock-item";
-                row.innerHTML = `
-                    <span class="symbol">${stock.symbol}</span>
-                    <span class="price">$${stock.price}</span>
-                    <span class="change ${stock.change >= 0 ? 'positive' : 'negative'}">
+                const card = document.createElement("div");
+                card.className = "mover-card top-card";
+                card.onclick = () => goToStockDetail(stock.symbol);
+
+                card.innerHTML = `
+                    <div class="mover-header">
+                        <span class="mover-symbol">${stock.symbol}</span>
+                        <span class="mover-price">$${stock.price}</span>
+                    </div>
+                    <div class="mover-name">${stock.name}</div>
+                    <div class="mover-change ${stock.change >= 0 ? 'positive' : 'negative'}">
                         ${stock.change} (${stock.change_percent})
-                    </span>
+                    </div>
+                    <div class="mover-details" style="display:none;"></div>
                 `;
-                container.appendChild(row);
-            });
+                
+                container.appendChild(card);
+            });      
         })
         .catch(err => {
             console.error("❌ Failed to load trending stocks:", err);
