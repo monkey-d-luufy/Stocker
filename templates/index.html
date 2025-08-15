@@ -1111,5 +1111,42 @@
         // Auto-focus on the input
         stockSymbol.focus();
     </script>
+    <script>
+  async function loadTrending() {
+      try {
+          const response = await fetch('/api/trending');
+          if (!response.ok) throw new Error('HTTP error! status: ' + response.status);
+
+          const data = await response.json();
+          const container = document.getElementById('stocks-container');
+
+          container.innerHTML = '';
+
+          data.trending_stocks.forEach(stock => {
+              const stockDiv = document.createElement('div');
+              stockDiv.style.border = '1px solid #ccc';
+              stockDiv.style.padding = '10px';
+              stockDiv.style.margin = '5px';
+              stockDiv.style.display = 'inline-block';
+              stockDiv.style.width = '150px';
+              stockDiv.style.textAlign = 'center';
+              stockDiv.innerHTML = `
+                  <strong>${stock.symbol}</strong><br>
+                  $${stock.price.toFixed(2)}<br>
+                  <span style="color: ${stock.change >= 0 ? 'green' : 'red'};">
+                    ${stock.change_percent}
+                  </span>
+              `;
+              container.appendChild(stockDiv);
+          });
+      } catch (err) {
+          console.error('Failed to load trending stocks:', err);
+          const container = document.getElementById('stocks-container');
+          container.innerHTML = '❌ Failed to load trending stocks.';
+      }
+  }
+
+  window.onload = loadTrending;
+</script>
 </body>
 </html>
