@@ -124,36 +124,32 @@ POPULAR_STOCKS = ['AAPL', 'MSFT', 'TSLA', 'NVDA', 'AMZN', 'GOOGL', 'META']
 # ------------------------
 # Trending Stocks Endpoint
 # ------------------------
-@app.route('/api/trending')
+@app.route("/api/trending")
 def get_trending():
-    global cached_trending, last_fetch_time
+    try:
+        symbols = ["AAPL", "MSFT", "TSLA", "NVDA", "AMZN"]  # example list
+        trending_data = []
 
-    # Cache for 5 minutes
-    if cached_trending and last_fetch_time and datetime.now() - last_fetch_time < timedelta(minutes=5):
-        return jsonify({"trending_stocks": cached_trending})
+        for symbol in symbols:
+            stock = yf.Ticker(symbol)
+            info = stock.history(period="1d")
+            if not info.empty:
+                price = round(info["Close"].iloc[-1], 2)
+                open_price = round(info["Open"].iloc[-1], 2)
+                change = round(price - open_price, 2)
+                change_percent = f"{(change / open_price * 100):.2f}%"
+                trending_data.append({
+                    "symbol": symbol,
+                    "price": price,
+                    "change": change,
+                    "change_percent": change_percent
+                })
 
-    symbols = ["AAPL", "MSFT", "TSLA", "NVDA", "AMZN"]
-    trending_stocks = []
+        return jsonify({"trending_stocks": trending_data})
 
-    for sym in symbols:
-        ticker = yf.Ticker(sym)
-        info = ticker.history(period="1d")
-        if not info.empty:
-            price = info["Close"].iloc[-1]
-            prev_close = info["Close"].iloc[-2] if len(info) > 1 else price
-            change = price - prev_close
-            change_percent = (change / prev_close) * 100 if prev_close else 0
-            trending_stocks.append({
-                "symbol": sym,
-                "price": round(price, 2),
-                "change": round(change, 2),
-                "change_percent": f"{change_percent:.2f}%"
-            })
-
-    cached_trending = trending_stocks
-    last_fetch_time = datetime.now()
-    return jsonify({"trending_stocks": trending_stocks})
-
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+        
 # ------------------------
 # Main
 # ------------------------
