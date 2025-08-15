@@ -123,22 +123,36 @@ POPULAR_STOCKS = ['AAPL', 'MSFT', 'TSLA', 'NVDA', 'AMZN', 'GOOGL', 'META']
 # Trending Stocks Endpoint
 # ------------------------
 @app.route('/api/trending')
-def get_trending():
-    trending = []
-    for symbol in POPULAR_STOCKS:
-        stock = get_stock_data(symbol)
-        if 'error' not in stock:
-            trending.append({
-                'symbol': stock['symbol'],
-                'price': stock['price'],
-                'change': stock['change'],
-                'change_percent': stock['change_percent'],
-                'volume': stock['volume'],
+def get_trending_stocks():
+    try:
+        trending_tickers = ["AAPL", "MSFT", "TSLA", "NVDA", "AMZN"]  # Pick your own list
+        trending_data = []
+
+        for ticker in trending_tickers:
+            stock = yf.Ticker(ticker)
+            info = stock.info
+
+            price = info.get("regularMarketPrice")
+            previous_close = info.get("regularMarketPreviousClose")
+
+            if price is not None and previous_close is not None:
+                change = price - previous_close
+                change_percent = (change / previous_close) * 100
+            else:
+                change = None
+                change_percent = None
+
+            trending_data.append({
+                "symbol": ticker,
+                "price": round(price, 2) if price else None,
+                "change": round(change, 2) if change else None,
+                "change_percent": f"{round(change_percent, 2)}%" if change_percent else None
             })
-    return jsonify({
-        'trending_stocks': trending,
-        'timestamp': datetime.now().isoformat()
-    })
+
+        return jsonify({"trending_stocks": trending_data})
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ------------------------
 # Main
