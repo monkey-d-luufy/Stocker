@@ -487,21 +487,28 @@ def get_trending():
     for symbol in symbols:
         try:
             stock = yf.Ticker(symbol)
-            info = stock.history(period="1d")
-            if not info.empty:
-                price = round(info["Close"].iloc[-1], 2)
-                open_price = round(info["Open"].iloc[-1], 2)
+            info = stock.info
+            hist = stock.history(period="1d")
+
+            if not hist.empty:
+                price = round(hist["Close"].iloc[-1], 2)
+                open_price = round(hist["Open"].iloc[-1], 2)
                 change = round(price - open_price, 2)
                 change_percent = f"{(change / open_price * 100):.2f}%"
+
                 trending_data.append({
                     "symbol": symbol,
+                    "name": info.get("shortName", "N/A"),
                     "price": price,
                     "change": change,
-                    "change_percent": change_percent
+                    "change_percent": change_percent,
+                    "volume": info.get("volume", "N/A"),
+                    "market_cap": info.get("marketCap", "N/A"),
+                    "sector": info.get("sector", "N/A")
                 })
         except Exception as e:
             print(f"Error fetching {symbol}: {e}")
-            continue  # skip this symbol
+            continue
 
     return jsonify({"trending_stocks": trending_data})
         
