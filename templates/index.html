@@ -1196,9 +1196,6 @@ document.addEventListener("DOMContentLoaded", () => {
 <script>
 async function loadTrendingStocks() {
     const container = document.getElementById('trendingStocks');
-    const errorBox  = document.getElementById('trendingError');
-
-    // Show placeholder while loading
     container.innerHTML = '<div class="trending-card">Loading…</div>';
 
     try {
@@ -1206,15 +1203,8 @@ async function loadTrendingStocks() {
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
 
-        const items = data?.trending_stocks || [];
-        if (!items.length) {
-            container.innerHTML = '<div class="trending-card">No trending stocks available.</div>';
-            return;
-        }
-
-        // Build cards using your existing CSS classes
         container.innerHTML = '';
-        items.forEach(s => {
+        data.trending_stocks.forEach(s => {
             const positive = Number(s.change) >= 0;
             const card = document.createElement('div');
             card.className = 'trending-card';
@@ -1222,26 +1212,26 @@ async function loadTrendingStocks() {
                 <a href="/stock/${s.symbol}" style="text-decoration:none; color:inherit;">
                     <div class="card-top">
                         <h3 class="symbol">${s.symbol}</h3>
+                        <p class="name">${s.name}</p>
                     </div>
                     <div class="card-mid">
                         <div class="price">$${Number(s.price).toFixed(2)}</div>
+                        <div class="${positive ? 'positive' : 'negative'}">
+                            ${positive ? '▲' : '▼'} ${Number(s.change).toFixed(2)} (${s.change_percent})
+                        </div>
                     </div>
-                    <div class="card-bottom ${positive ? 'positive' : 'negative'}">
-                        ${positive ? '▲' : '▼'} ${Number(s.change).toFixed(2)} (${s.change_percent})
+                    <div class="card-bottom">
+                        <p>Volume: ${s.volume?.toLocaleString() || 'N/A'}</p>
+                        <p>Market Cap: ${s.market_cap?.toLocaleString() || 'N/A'}</p>
+                        <p>Sector: ${s.sector || 'N/A'}</p>
                     </div>
                 </a>
             `;
             container.appendChild(card);
         });
-
-        errorBox.style.display = 'none';
-        errorBox.textContent = '';
-
     } catch (err) {
         console.error('Failed to load trending stocks:', err);
-        container.innerHTML = '';
-        errorBox.style.display = 'block';
-        errorBox.textContent = '⚠ Failed to load trending stocks. Please try again later.';
+        container.innerHTML = '<p>⚠ Failed to load trending stocks.</p>';
     }
 }
 
