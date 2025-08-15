@@ -2,75 +2,49 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stocker</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
+    <script>
+        // Fetch trending stocks safely
+        async function loadTrendingStocks() {
+            const container = document.getElementById('trending-stocks');
+            container.innerHTML = 'Loading trending stocks...';
+
+            try {
+                const response = await fetch('/api/trending');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (!data.trending_stocks || data.trending_stocks.length === 0) {
+                    container.innerHTML = 'No trending stocks available.';
+                    return;
+                }
+
+                // Build a simple list
+                const list = document.createElement('ul');
+                data.trending_stocks.forEach(stock => {
+                    const item = document.createElement('li');
+                    item.textContent = `${stock.symbol}: $${stock.price.toFixed(2)} (${stock.change_percent})`;
+                    list.appendChild(item);
+                });
+
+                container.innerHTML = '';
+                container.appendChild(list);
+
+            } catch (err) {
+                container.innerHTML = `❌ Failed to load trending stocks: ${err.message}`;
+                console.error(err);
+            }
         }
-        #trending-stocks {
-            margin-top: 20px;
-        }
-        .stock-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px;
-            border-bottom: 1px solid #ddd;
-        }
-        .symbol {
-            font-weight: bold;
-        }
-        .positive {
-            color: green;
-        }
-        .negative {
-            color: red;
-        }
-    </style>
+
+        // Call on page load
+        window.addEventListener('DOMContentLoaded', loadTrendingStocks);
+    </script>
 </head>
 <body>
     <h1>Trending Stocks</h1>
     <div id="trending-stocks">Loading...</div>
-
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            fetch('/api/trending')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    const stocks = data.trending_stocks; // ✅ matches backend key
-                    const container = document.getElementById("trending-stocks");
-                    container.innerHTML = ""; // Clear "Loading..."
-
-                    if (!stocks || stocks.length === 0) {
-                        container.innerHTML = "<p>No trending stocks found.</p>";
-                        return;
-                    }
-
-                    stocks.forEach(stock => {
-                        const row = document.createElement("div");
-                        row.className = "stock-item";
-                        row.innerHTML = `
-                            <span class="symbol">${stock.symbol}</span>
-                            <span class="price">$${stock.price.toFixed(2)}</span>
-                            <span class="change ${stock.change >= 0 ? 'positive' : 'negative'}">
-                                ${stock.change.toFixed(2)} (${stock.change_percent})
-                            </span>
-                        `;
-                        container.appendChild(row);
-                    });
-                })
-                .catch(err => {
-                    console.error("❌ Failed to load trending stocks:", err);
-                    document.getElementById("trending-stocks").innerHTML =
-                        "<p>Error loading stocks. Try again later.</p>";
-                });
-        });
-    </script>
 </body>
 </html>
