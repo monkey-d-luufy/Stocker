@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import requests
 import json
+import yfinance as yf
 from datetime import datetime, timedelta
 import os
 
@@ -14,86 +15,44 @@ ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
 AI_API_KEY = os.getenv("AI_API_KEY", "")  # Set this in Secrets
 
 def get_stock_data(symbol):
-    """Fetch real-time stock data"""
+    """Fetch stock price data using Yahoo Finance"""
     try:
-        params = {
-            'function': 'GLOBAL_QUOTE',
-            'symbol': symbol,
-            'apikey': ALPHA_VANTAGE_API_KEY
+        stock = yf.Ticker(symbol)
+        info = stock.info
+
+        return {
+            'symbol': symbol.upper(),
+            'price': info.get('currentPrice', 0),
+            'change': info.get('regularMarketChange', 0),
+            'change_percent': f"{info.get('regularMarketChangePercent', 0):.2f}%",
+            'volume': info.get('volume', 0),
+            'last_updated': datetime.now().strftime('%Y-%m-%d')
         }
-
-        response = requests.get(ALPHA_VANTAGE_URL, params=params, timeout=10)
-        data = response.json()
-
-        if "Global Quote" in data:
-            quote = data["Global Quote"]
-            return {
-                'symbol': quote.get('01. symbol', symbol),
-                'price': float(quote.get('05. price', 0)),
-                'change': float(quote.get('09. change', 0)),
-                'change_percent': quote.get('10. change percent', '0%'),
-                'volume': int(quote.get('06. volume', 0)),
-                'last_updated': quote.get('07. latest trading day', '')
-            }
-        else:
-            # Fallback demo data
-            return {
-                'symbol': symbol.upper(),
-                'price': 150.25,
-                'change': 2.15,
-                'change_percent': '+1.45%',
-                'volume': 1250000,
-                'last_updated': datetime.now().strftime('%Y-%m-%d')
-            }
     except Exception as e:
-        print(f"Error fetching stock data: {e}")
-        return None
+        return {'error': str(e)}
 
 def get_stock_fundamentals(symbol):
-    """Fetch stock fundamentals data"""
+    """Fetch stock fundamentals data using Yahoo Finance"""
     try:
-        params = {
-            'function': 'OVERVIEW',
-            'symbol': symbol,
-            'apikey': ALPHA_VANTAGE_API_KEY
+        stock = yf.Ticker(symbol)
+        info = stock.info
+
+        return {
+            'market_cap': info.get('marketCap', 'N/A'),
+            'pe_ratio': info.get('trailingPE', 'N/A'),
+            'peg_ratio': info.get('pegRatio', 'N/A'),
+            'dividend_yield': info.get('dividendYield', 'N/A'),
+            'eps': info.get('trailingEps', 'N/A'),
+            'beta': info.get('beta', 'N/A'),
+            '52_week_high': info.get('fiftyTwoWeekHigh', 'N/A'),
+            '52_week_low': info.get('fiftyTwoWeekLow', 'N/A'),
+            'analyst_target': info.get('targetMeanPrice', 'N/A'),
+            'sector': info.get('sector', 'N/A'),
+            'industry': info.get('industry', 'N/A')
         }
 
-        response = requests.get(ALPHA_VANTAGE_URL, params=params, timeout=10)
-        data = response.json()
-
-        if 'Symbol' in data and data['Symbol']:
-            return {
-                'market_cap': data.get('MarketCapitalization', 'N/A'),
-                'pe_ratio': data.get('PERatio', 'N/A'),
-                'peg_ratio': data.get('PEGRatio', 'N/A'),
-                'dividend_yield': data.get('DividendYield', 'N/A'),
-                'eps': data.get('EPS', 'N/A'),
-                'beta': data.get('Beta', 'N/A'),
-                '52_week_high': data.get('52WeekHigh', 'N/A'),
-                '52_week_low': data.get('52WeekLow', 'N/A'),
-                'analyst_target': data.get('AnalystTargetPrice', 'N/A'),
-                'sector': data.get('Sector', 'N/A'),
-                'industry': data.get('Industry', 'N/A')
-            }
-        else:
-            # Demo fundamentals data
-            import random
-            return {
-                'market_cap': f"{random.randint(10, 2000)}B",
-                'pe_ratio': f"{random.uniform(15, 35):.2f}",
-                'peg_ratio': f"{random.uniform(0.5, 2.5):.2f}",
-                'dividend_yield': f"{random.uniform(0, 5):.2f}%",
-                'eps': f"{random.uniform(2, 15):.2f}",
-                'beta': f"{random.uniform(0.5, 2.0):.2f}",
-                '52_week_high': f"{random.uniform(180, 250):.2f}",
-                '52_week_low': f"{random.uniform(100, 150):.2f}",
-                'analyst_target': f"{random.uniform(160, 200):.2f}",
-                'sector': random.choice(['Technology', 'Healthcare', 'Finance', 'Energy']),
-                'industry': random.choice(['Software', 'Biotechnology', 'Banking', 'Oil & Gas'])
-            }
     except Exception as e:
-        print(f"Error fetching fundamentals: {e}")
-        return None
+        return {'error': str(e)}
 
 def get_trending_stocks():
     """Get trending/hottest stocks with demo data"""
@@ -454,43 +413,43 @@ def get_historical_data(symbol):
         return None
 
 def get_ai_insights(stock_data):
-    """Generate AI-powered insights about the stock"""
-    if not stock_data:
+    """Simple rule-based insights"""
+    if not stock_data or 'error' in stock_data:
         return "Unable to generate insights - no stock data available."
 
-    # Simple rule-based insights (you can replace this with actual AI API calls)
     price = stock_data['price']
     change = stock_data['change']
-    change_percent = float(stock_data['change_percent'].replace('%', '').replace('+', ''))
+    try:
+        change_percent = float(stock_data['change_percent'].replace('%', '').replace('+', ''))
+    except:
+        change_percent = 0
 
     insights = []
 
     if change > 0:
         if change_percent > 5:
-            insights.append("🚀 Strong upward momentum! The stock is showing significant gains today.")
+            insights.append("🚀 Strong upward momentum!")
         elif change_percent > 2:
-            insights.append("📈 Positive trend observed. The stock is performing well.")
+            insights.append("📈 Positive trend observed.")
         else:
-            insights.append("✅ Mild positive movement. Steady growth pattern.")
+            insights.append("✅ Mild positive movement.")
     elif change < 0:
         if change_percent < -5:
-            insights.append("⚠️ Significant decline detected. Consider reviewing your position.")
+            insights.append("⚠️ Significant decline detected.")
         elif change_percent < -2:
-            insights.append("📉 Negative trend. Monitor closely for further developments.")
+            insights.append("📉 Negative trend.")
         else:
-            insights.append("🔄 Minor decline. Normal market fluctuation.")
+            insights.append("🔄 Minor decline.")
     else:
-        insights.append("➡️ Stable price action. The stock is trading sideways.")
+        insights.append("➡️ Stable price action.")
 
-    # Volume analysis
     if stock_data['volume'] > 1000000:
-        insights.append("📊 High trading volume indicates strong investor interest.")
+        insights.append("📊 High trading volume.")
 
-    # Price level analysis
     if price > 200:
-        insights.append("💎 Premium stock price range. Quality company indicator.")
+        insights.append("💎 Premium stock price range.")
     elif price < 50:
-        insights.append("💰 Affordable entry point for potential growth.")
+        insights.append("💰 Affordable entry point.")
 
     return " ".join(insights)
 
@@ -500,12 +459,14 @@ def index():
 
 @app.route('/api/stock/<symbol>')
 def get_stock_info(symbol):
-    """API endpoint to get stock data and AI insights"""
     stock_data = get_stock_data(symbol)
-    if not stock_data:
-        return jsonify({'error': 'Unable to fetch stock data'}), 400
+    if 'error' in stock_data:
+        return jsonify({'error': stock_data['error']}), 400
 
     fundamentals = get_stock_fundamentals(symbol)
+    if 'error' in fundamentals:
+        return jsonify({'error': fundamentals['error']}), 400
+
     ai_insights = get_ai_insights(stock_data)
 
     return jsonify({
