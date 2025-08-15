@@ -1,8 +1,10 @@
 from flask import Flask, render_template, request, jsonify
 import yfinance as yf
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 
+cached_trending = None
+last_fetch_time = None
 app = Flask(__name__)
 
 # ------------------------
@@ -123,36 +125,34 @@ POPULAR_STOCKS = ['AAPL', 'MSFT', 'TSLA', 'NVDA', 'AMZN', 'GOOGL', 'META']
 # Trending Stocks Endpoint
 # ------------------------
 @app.route('/api/trending')
-def get_trending_stocks():
-    try:
-        trending_tickers = ["AAPL", "MSFT", "TSLA", "NVDA", "AMZN"]  # Pick your own list
-        trending_data = []
+def get_trending():
+    global cached_trending, last_fetch_time
 
-        for ticker in trending_tickers:
-            stock = yf.Ticker(ticker)
-            info = stock.info
+    # Cache for 5 minutes
+    if cached_trending and last_fetch_time and datetime.now() - last_fetch_time < timedelta(minutes=5):
+        return jsonify({"trending_stocks": cached_trending})
 
-            price = info.get("regularMarketPrice")
-            previous_close = info.get("regularMarketPreviousClose")
+    symbols = ["AAPL", "MSFT", "TSLA", "NVDA", "AMZN"]
+    trending_stocks = []
 
-            if price is not None and previous_close is not None:
-                change = price - previous_close
-                change_percent = (change / previous_close) * 100
-            else:
-                change = None
-                change_percent = None
-
-            trending_data.append({
-                "symbol": ticker,
-                "price": round(price, 2) if price else None,
-                "change": round(change, 2) if change else None,
-                "change_percent": f"{round(change_percent, 2)}%" if change_percent else None
+    for sym in symbols:
+        ticker = yf.Ticker(sym)
+        info = ticker.history(period="1d")
+        if not info.empty:
+            price = info["Close"].iloc[-1]
+            prev_close = info["Close"].iloc[-2] if len(info) > 1 else price
+            change = price - prev_close
+            change_percent = (change / prev_close) * 100 if prev_close else 0
+            trending_stocks.append({
+                "symbol": sym,
+                "price": round(price, 2),
+                "change": round(change, 2),
+                "change_percent": f"{change_percent:.2f}%"
             })
 
-        return jsonify({"trending_stocks": trending_data})
-    
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    cached_trending = trending_stocks
+    last_fetch_time = datetime.now()
+    return jsonify({"trending_stocks": trending_stocks})
 
 # ------------------------
 # Main
