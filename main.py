@@ -481,11 +481,11 @@ def get_stock_info(symbol):
 
 @app.route("/api/trending")
 def get_trending():
-    try:
-        symbols = ["AAPL", "MSFT", "TSLA", "NVDA", "AMZN"]  # example list
-        trending_data = []
+    symbols = ["AAPL", "MSFT", "TSLA", "NVDA", "AMZN"]
+    trending_data = []
 
-        for symbol in symbols:
+    for symbol in symbols:
+        try:
             stock = yf.Ticker(symbol)
             info = stock.history(period="1d")
             if not info.empty:
@@ -499,11 +499,11 @@ def get_trending():
                     "change": change,
                     "change_percent": change_percent
                 })
+        except Exception as e:
+            print(f"Error fetching {symbol}: {e}")
+            continue  # skip this symbol
 
-        return jsonify({"trending_stocks": trending_data})
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return jsonify({"trending_stocks": trending_data})
         
 @app.route('/api/market-movers')
 def get_market_movers_api():
