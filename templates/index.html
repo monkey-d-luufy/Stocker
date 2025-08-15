@@ -1148,5 +1148,37 @@
 
   window.onload = loadTrending;
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    fetch('/api/trending')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            const stocks = data.trending_stocks; // ✅ match backend key
+            const container = document.getElementById("trending-stocks");
+
+            container.innerHTML = ""; // clear before rendering
+            stocks.forEach(stock => {
+                const row = document.createElement("div");
+                row.className = "stock-item";
+                row.innerHTML = `
+                    <span class="symbol">${stock.symbol}</span>
+                    <span class="price">$${stock.price}</span>
+                    <span class="change ${stock.change >= 0 ? 'positive' : 'negative'}">
+                        ${stock.change} (${stock.change_percent})
+                    </span>
+                `;
+                container.appendChild(row);
+            });
+        })
+        .catch(err => {
+            console.error("❌ Failed to load trending stocks:", err);
+        });
+});
+</script>
 </body>
 </html>
