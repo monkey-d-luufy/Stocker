@@ -747,18 +747,31 @@
             loadExchangeData();
         });
 
-        async function loadTrendingStocks() {
-            try {
-                const response = await fetch('/api/trending');
-                const data = await response.json();
+async function loadTrendingStocks() {
+    try {
+        const res = await fetch('/api/trending');
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
 
-                if (response.ok) {
-                    displayTrendingStocks(data.trending_stocks);
-                }
-            } catch (error) {
-                console.error('Error loading trending stocks:', error);
-            }
-        }
+        const container = document.getElementById('trending-stocks');
+        container.innerHTML = ''; // Clear previous content
+
+        data.trending_stocks.forEach(stock => {
+            const card = document.createElement('div');
+            card.className = 'stock-card';
+            card.innerHTML = `
+                <h3>${stock.symbol}</h3>
+                <p>Price: $${stock.price}</p>
+                <p>Change: ${stock.change} (${stock.change_percent})</p>
+            `;
+            container.appendChild(card);
+        });
+    } catch (err) {
+        console.error('Failed to load trending stocks:', err);
+        document.getElementById('trending-stocks').innerText = 'Failed to load stocks.';
+    }
+}
+
 
         async function loadMarketMovers() {
             try {
