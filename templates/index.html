@@ -1236,13 +1236,6 @@ async function loadTrendingStocks() {
 }
 
 document.addEventListener('DOMContentLoaded', loadTrendingStocks);
-</script>
-        <div class="trending-section">
-            <h2>🔥 Trending Stocks</h2>
-                <div id="trendingStocks" class="trending-stocks-container"></div>
-                <div id="trendingError" style="display:none;"></div>
-        </div>
-
 <script>
     // Step 2: Get the container
     const trendingContainer = document.getElementById('trendingStocks');
@@ -1273,6 +1266,12 @@ document.addEventListener('DOMContentLoaded', loadTrendingStocks);
         trendingContainer.appendChild(card);
     });
 </script>
+</script>
+        <div class="trending-section">
+            <h2>🔥 Trending Stocks</h2>
+                <div id="trendingStocks" class="trending-stocks-container"></div>
+                <div id="trendingError" style="display:none;"></div>
+        </div>
     
 </body>
 </html>
