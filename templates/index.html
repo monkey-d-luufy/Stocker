@@ -1200,5 +1200,32 @@ document.addEventListener("DOMContentLoaded", () => {
       })
       .catch(error => console.error('Error fetching trending stocks:', error));
     </script>
+    <script>
+document.addEventListener("DOMContentLoaded", function() {
+  fetch('/api/trending')
+    .then(response => response.json())
+    .then(data => {
+      const container = document.getElementById('trending-stocks');
+      container.innerHTML = ''; // clear previous content
+      if (!data.trending_stocks || data.trending_stocks.length === 0) {
+        container.innerHTML = '<p>No trending stocks available</p>';
+        return;
+      }
+      data.trending_stocks.forEach(stock => {
+        container.innerHTML += `
+          <div class="stock-card">
+            <span class="symbol">${stock.symbol}</span>
+            <span class="price">$${stock.price.toFixed(2)}</span>
+            <span class="change">${stock.change_percent}</span>
+          </div>
+        `;
+      });
+    })
+    .catch(err => {
+      console.error('Error fetching trending stocks:', err);
+      document.getElementById('trending-stocks').innerHTML = '<p>Error loading stocks</p>';
+    });
+});
+</script>
 </body>
 </html>
