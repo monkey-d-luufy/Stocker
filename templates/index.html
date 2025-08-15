@@ -3,8 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <title>Stocker</title>
+    <!-- Your existing CSS links -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header / Navbar -->
+    <header>
+        <h1>Stocker</h1>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/watchlist">Watchlist</a>
+            <a href="/exchanges">Exchanges</a>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <section class="trending-section">
+            <h2>Trending Stocks</h2>
+            <div id="trending-stocks" class="trending-stocks">
+                Loading trending stocks...
+            </div>
+        </section>
+        <!-- You can keep other sections here -->
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>© 2025 Stocker</p>
+    </footer>
+
+    <!-- Trending Stocks Script -->
     <script>
-        // Fetch trending stocks safely
         async function loadTrendingStocks() {
             const container = document.getElementById('trending-stocks');
             container.innerHTML = 'Loading trending stocks...';
@@ -22,11 +52,17 @@
                     return;
                 }
 
-                // Build a simple list
                 const list = document.createElement('ul');
+                list.className = 'stock-list'; // Use your CSS class if needed
+
                 data.trending_stocks.forEach(stock => {
                     const item = document.createElement('li');
-                    item.textContent = `${stock.symbol}: $${stock.price.toFixed(2)} (${stock.change_percent})`;
+                    item.className = 'stock-item';
+                    item.innerHTML = `
+                        <a href="/stock/${stock.symbol}">
+                            ${stock.symbol}: $${stock.price.toFixed(2)} (${stock.change_percent})
+                        </a>
+                    `;
                     list.appendChild(item);
                 });
 
@@ -39,12 +75,7 @@
             }
         }
 
-        // Call on page load
         window.addEventListener('DOMContentLoaded', loadTrendingStocks);
     </script>
-</head>
-<body>
-    <h1>Trending Stocks</h1>
-    <div id="trending-stocks">Loading...</div>
 </body>
 </html>
