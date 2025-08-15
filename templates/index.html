@@ -728,6 +728,25 @@
         </div>
     </div>
 
+     <script>
+    fetch('/api/trending')
+      .then(response => response.json())
+      .then(data => {
+        const container = document.getElementById('trending-stocks');
+        container.innerHTML = '';
+        data.trending_stocks.forEach(stock => {
+          container.innerHTML += `
+            <div class="stock">
+              <span>${stock.symbol}</span>
+              <span>${stock.price}</span>
+              <span>${stock.change_percent}</span>
+            </div>
+          `;
+        });
+      })
+      .catch(error => console.error('Error fetching trending stocks:', error));
+    </script>
+    
     <script>
         const searchBtn = document.getElementById('searchBtn');
         const stockSymbol = document.getElementById('stockSymbol');
