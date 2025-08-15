@@ -664,10 +664,8 @@
         
         <div class="trending-section">
             <h2>🔥 Trending Stocks</h2>
-            <div class="trending-stocks-container" id="trendingStocks">
-                <!-- Trending stocks will be populated here -->
-            </div>
-            <div id="error-container"></div>
+                <div id="trendingStocks" class="trending-stocks-container"></div>
+                <div id="trendingError" style="display:none;"></div>
         </div>
 
         <div class="market-movers-section">
@@ -1194,58 +1192,65 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 });
 </script>
+    
 <script>
-    fetch('/api/trending')
-      .then(response => response.json())
-      .then(data => {
-        const container = document.getElementById('trending-stocks');
-        container.innerHTML = '';
-        data.trending_stocks.forEach(stock => {
-          container.innerHTML += `
-            <div class="stock">
-              <span>${stock.symbol}</span>
-              <span>${stock.price}</span>
-              <span>${stock.change_percent}</span>
-            </div>
-          `;
-        });
-      })
-      .catch(error => console.error('Error fetching trending stocks:', error));
-    </script>
-  <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      fetch('/api/trending')
-        .then(response => response.json())
-        .then(data => {
-          const container = document.getElementById('trending-stocks');
-          const errorContainer = document.getElementById('error-container');
-          container.innerHTML = '';
-          errorContainer.innerHTML = '';
+async function loadTrendingStocks() {
+    const container = document.getElementById('trendingStocks');
+    const errorBox  = document.getElementById('trendingError');
 
-          if (!data.trending_stocks || data.trending_stocks.length === 0) {
-            errorContainer.innerHTML = '<p class="error-message">No trending stocks available.</p>';
+    // Show placeholder while loading
+    container.innerHTML = '<div class="trending-card">Loading…</div>';
+
+    try {
+        const res = await fetch('/api/trending');
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+
+        const items = data?.trending_stocks || [];
+        if (!items.length) {
+            container.innerHTML = '<div class="trending-card">No trending stocks available.</div>';
             return;
-          }
+        }
 
-          data.trending_stocks.forEach(stock => {
-            const changeClass = parseFloat(stock.change) >= 0 ? 'positive' : 'negative';
-
+        // Build cards using your existing CSS classes
+        container.innerHTML = '';
+        items.forEach(s => {
+            const positive = Number(s.change) >= 0;
             const card = document.createElement('div');
-            card.className = 'stock-card';
+            card.className = 'trending-card';
             card.innerHTML = `
-              <span class="symbol">${stock.symbol}</span>
-              <span class="price">$${stock.price.toFixed(2)}</span>
-              <span class="change ${changeClass}">${stock.change_percent}</span>
+                <a href="/stock/${s.symbol}" style="text-decoration:none; color:inherit;">
+                    <div class="card-top">
+                        <h3 class="symbol">${s.symbol}</h3>
+                    </div>
+                    <div class="card-mid">
+                        <div class="price">$${Number(s.price).toFixed(2)}</div>
+                    </div>
+                    <div class="card-bottom ${positive ? 'positive' : 'negative'}">
+                        ${positive ? '▲' : '▼'} ${Number(s.change).toFixed(2)} (${s.change_percent})
+                    </div>
+                </a>
             `;
             container.appendChild(card);
-          });
-        })
-        .catch(err => {
-          console.error('Error fetching trending stocks:', err);
-          const errorContainer = document.getElementById('error-container');
-          errorContainer.innerHTML = '<p class="error-message">Failed to load trending stocks.</p>';
         });
-    });
-  </script>
+
+        errorBox.style.display = 'none';
+        errorBox.textContent = '';
+
+    } catch (err) {
+        console.error('Failed to load trending stocks:', err);
+        container.innerHTML = '';
+        errorBox.style.display = 'block';
+        errorBox.textContent = '⚠ Failed to load trending stocks. Please try again later.';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadTrendingStocks);
+</script>
+        <div class="trending-section">
+            <h2>🔥 Trending Stocks</h2>
+                <div id="trendingStocks" class="trending-stocks-container"></div>
+                <div id="trendingError" style="display:none;"></div>
+        </div>
 </body>
 </html>
