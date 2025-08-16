@@ -1279,10 +1279,10 @@ async function loadTrendingStocks() {
                     ${positive ? '▲' : '▼'} ${Number(stock.change).toFixed(2)} (${stock.change_percent})
                 </div>
                 <div class="mover-details">
-                    <div>Volume: ${stock.volume?.toLocaleString() || 'N/A'}</div>
-                    <div>Market Cap: ${stock.market_cap?.toLocaleString() || 'N/A'}</div>
-                    <div>Sector: ${stock.sector || 'N/A'}</div>
-                    <div>P/E: ${stock.pe_ratio || 'N/A'}</div>
+                    <div><strong>Volume:</strong> ${stock.volume?.toLocaleString() || 'N/A'}</div>
+                    <div><strong>Market Cap:</strong> ${stock.market_cap?.toLocaleString() || 'N/A'}</div>
+                    <div><strong>Sector:</strong> ${stock.sector || 'N/A'}</div>
+                    <div><strong>P/E:</strong> ${stock.pe_ratio || 'N/A'}</div>
                 </div>
             `;
 
