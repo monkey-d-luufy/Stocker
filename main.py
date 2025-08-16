@@ -504,7 +504,8 @@ def get_trending():
                     "change_percent": change_percent,
                     "volume": info.get("volume", "N/A"),
                     "market_cap": info.get("marketCap", "N/A"),
-                    "sector": info.get("sector", "N/A")
+                    "sector": info.get("sector", "N/A"),
+                    "pe_ratio": info.get("trailingPE", "N/A")
                 })
         except Exception as e:
             print(f"Error fetching {symbol}: {e}")
