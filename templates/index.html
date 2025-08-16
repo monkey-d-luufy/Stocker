@@ -1244,34 +1244,50 @@ async function loadTrendingStocks() {
 
 document.addEventListener('DOMContentLoaded', loadTrendingStocks);
 <script>
-    // Step 2: Get the container
+async function loadTrendingStocks() {
     const trendingContainer = document.getElementById('trendingStocks');
+    trendingContainer.innerHTML = '<p>Loading...</p>';
 
-    // Step 3: Example data for trending stocks
-    const trendingStocks = [
-        {symbol: 'AAPL', name: 'Apple Inc.', price: 173.25},
-        {symbol: 'NFLX', name: 'Netflix Inc.', price: 16.99},
-        {symbol: 'TSLA', name: 'Tesla Inc.', price: 250.50},
-    ];
+    try {
+        const res = await fetch('/api/trending');
+        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+        const data = await res.json();
 
-    // Step 4: Create cards dynamically
-    trendingStocks.forEach(stock => {
-        const card = document.createElement('div');
-        card.className = 'mover-card top-card';
-        card.onclick = () => goToStockDetail(stock.symbol);
+        trendingContainer.innerHTML = ''; // Clear loading text
 
-        card.innerHTML = `
-            <div class="mover-header">
-                <span class="mover-symbol">${stock.symbol}</span>
-                <span class="mover-price">$${stock.price}</span>
-            </div>
-            <div class="mover-name">${stock.name}</div>
-            <div class="mover-change"></div>
-            <div class="mover-details" style="display:none;"></div>
-        `;
+        data.trending_stocks.forEach(stock => {
+            const positive = Number(stock.change) >= 0;
+            const card = document.createElement('div');
+            card.className = 'mover-card top-card';
+            card.onclick = () => goToStockDetail(stock.symbol);
 
-        trendingContainer.appendChild(card);
-    });
+            card.innerHTML = `
+                <div class="mover-header">
+                    <span class="mover-symbol">${stock.symbol}</span>
+                    <span class="mover-price">$${Number(stock.price).toFixed(2)}</span>
+                </div>
+                <div class="mover-name">${stock.name}</div>
+                <div class="mover-change ${positive ? 'positive' : 'negative'}">
+                    ${positive ? '▲' : '▼'} ${Number(stock.change).toFixed(2)} (${stock.change_percent})
+                </div>
+                <div class="mover-details">
+                    <div>Volume: ${stock.volume?.toLocaleString() || 'N/A'}</div>
+                    <div>Market Cap: ${stock.market_cap?.toLocaleString() || 'N/A'}</div>
+                    <div>Sector: ${stock.sector || 'N/A'}</div>
+                    <div>P/E: ${stock.pe_ratio || 'N/A'}</div>
+                </div>
+            `;
+
+            trendingContainer.appendChild(card);
+        });
+
+    } catch (err) {
+        console.error('Error fetching trending stocks:', err);
+        trendingContainer.innerHTML = '<p>⚠ Failed to load trending stocks.</p>';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadTrendingStocks);
 </script>
 </script>
         <div class="trending-section">
