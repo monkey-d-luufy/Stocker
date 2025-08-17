@@ -7,14 +7,13 @@
     <style>
         /* Hide trending stocks initially to prevent flash of unstyled content */
         #trendingStocks {
-            display: none;   /* hidden by default */
+            display: grid; /* keep grid layout from the start */
             opacity: 0;
             transition: opacity 0.5s ease;
         }
         
         #trendingStocks.visible {
-            display: grid;   /* show when content is ready */
-            opacity: 1;
+            opacity: 1; /* fade in */
         }
         * {
             margin: 0;
@@ -1205,8 +1204,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 container.appendChild(card);
             });
             
-            // Reveal container with fade-in
-            container.style.opacity = 1;       
+            // make visible
+            container.classList.add("visible");   
         })
         .catch(err => {
             console.error("❌ Failed to load trending stocks:", err);
