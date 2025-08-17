@@ -5,11 +5,19 @@ import yfinance as yf
 from datetime import datetime, timedelta
 import os
 import math
+import time
 
 cached_trending = None
 last_fetch_time = None
 
 app = Flask(__name__)
+
+# Global cache
+market_movers_cache = {
+    "data": None,
+    "timestamp": 0
+}
+CACHE_DURATION = 5 * 60  # cache for 5 minutes (300 seconds)
 
 # Alpha Vantage API for stock data (free tier available)
 ALPHA_VANTAGE_API_KEY = "demo"  # Replace with your API key
@@ -134,12 +142,19 @@ def get_trending_stocks():
 
 def get_market_movers(n=20):
     """
-    Returns top n gainers and top n losers with live data
+    Returns top n gainers and top n losers with live data, using cache
     """
-    # Define your stock universe; can be S&P500 or full exchange list
+    global market_movers_cache
+    current_time = time.time()
+
+    # Return cached data if still valid
+    if market_movers_cache["data"] and (current_time - market_movers_cache["timestamp"] < CACHE_DURATION):
+        return market_movers_cache["data"]
+
+    # Define stock universe
     universe = ["AAPL","MSFT","TSLA","NFLX","GOOGL","AMZN","META","NVDA","INTC",
                 "AMD","PYPL","ADBE","CRM","UBER","LYFT","SPOT","SHOP","SQ","ZM","DOCU",
-                "MRNA","RIOT","AMC","GME","PLTR","PLUG","BBBY","WISH","CLOV","SPCE"]  # etc.
+                "MRNA","RIOT","AMC","GME","PLTR","PLUG","BBBY","WISH","CLOV","SPCE"]
 
     movers = []
     for sym in universe:
@@ -165,11 +180,17 @@ def get_market_movers(n=20):
             print(f"Error fetching {sym}: {e}")
 
     # Sort movers by percentage change
-    gainers = sorted(movers, key=lambda x: x["change_percent"], reverse=True)[:n]
-    losers = sorted(movers, key=lambda x: x["change_percent"])[:n]
+    gainers = sorted(movers, key=lambda x: float(x["change_percent"].replace('%','')), reverse=True)[:n]
+    losers = sorted(movers, key=lambda x: float(x["change_percent"].replace('%','')))[:n]
 
-    return {"gainers": gainers, "losers": losers}
+    result = {"gainers": gainers, "losers": losers}
 
+    # Update cache
+    market_movers_cache["data"] = result
+    market_movers_cache["timestamp"] = current_time
+
+    return result
+    
 def get_exchange_data():
     """Get stocks by exchange (NYSE, NASDAQ, AMEX)"""
     import random
