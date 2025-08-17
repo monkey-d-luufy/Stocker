@@ -1297,6 +1297,77 @@ async function loadTrendingStocks() {
 
 document.addEventListener('DOMContentLoaded', loadTrendingStocks);
 </script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const cards = Array.from(document.querySelectorAll(".mover-card"));
+  if (!cards.length) return;
+
+  const symbols = [...new Set(
+    cards.map(c => c.querySelector(".mover-symbol")?.textContent?.trim()).filter(Boolean)
+  )];
+
+  if (!symbols.length) return;
+
+  const fmtDollar = n => (n == null ? "—" : `$${Number(n).toLocaleString(undefined,{maximumFractionDigits:2})}`);
+  const fmtNumber = n => (n == null ? "—" : Number(n).toLocaleString());
+  const fmtMktCap = n => {
+    if (n == null) return "—";
+    if (n >= 1e12) return (n/1e12).toFixed(2) + "T";
+    if (n >= 1e9)  return (n/1e9 ).toFixed(2) + "B";
+    if (n >= 1e6)  return (n/1e6 ).toFixed(2) + "M";
+    return n.toLocaleString();
+  };
+  const signed = n => (n > 0 ? `+${n}` : `${n}`);
+
+  function setDetail(card, labelText, valueText) {
+    const rows = card.querySelectorAll(".mover-detail");
+    for (const row of rows) {
+      const [label, value] = row.querySelectorAll("span");
+      if (label && value && label.textContent.trim().replace(":","") === labelText.replace(":","")) {
+        value.textContent = valueText;
+        return;
+      }
+    }
+  }
+
+  async function refreshBottomCards() {
+    try {
+      const res = await fetch(`/api/quotes?symbols=${encodeURIComponent(symbols.join(","))}`, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { quotes } = await res.json();
+
+      cards.forEach(card => {
+        const sym = card.querySelector(".mover-symbol")?.textContent?.trim();
+        const q = quotes?.[sym];
+        if (!q) return;
+
+        const priceEl = card.querySelector(".mover-price");
+        const nameEl  = card.querySelector(".mover-name");
+        const chgEl   = card.querySelector(".mver-change, .mover-change"); // tolerate typo variants
+
+        if (priceEl) priceEl.textContent = fmtDollar(q.price);
+        if (nameEl)  nameEl.textContent  = q.name ?? sym;
+
+        if (chgEl && q.change != null && q.change_percent != null) {
+          chgEl.textContent = `${signed(q.change)} (${signed(q.change_percent)}%)`;
+          chgEl.classList.toggle("positive", q.change >= 0);
+          chgEl.classList.toggle("negative", q.change < 0);
+        }
+
+        setDetail(card, "Volume:",     fmtNumber(q.volume));
+        setDetail(card, "Market Cap:", fmtMktCap(q.market_cap));
+        setDetail(card, "Sector:",     q.sector ?? "—");
+      });
+    } catch (e) {
+      console.error("Failed to refresh bottom cards:", e);
+    }
+  }
+
+  refreshBottomCards();               // on load
+  setInterval(refreshBottomCards, 60_000); // every 60s
+});
+</script>
     
 </body>
 </html>
