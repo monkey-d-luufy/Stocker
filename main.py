@@ -142,7 +142,8 @@ def get_trending_stocks():
 
 def get_market_movers(n=20):
     """
-    Returns top n gainers and top n losers with live data, using cache
+    Returns top n gainers and top n losers with live data, using cache,
+    and formats market cap with commas.
     """
     global market_movers_cache
     current_time = time.time()
@@ -166,6 +167,11 @@ def get_market_movers(n=20):
             if price and prev_close:
                 change_percent = (price - prev_close) / prev_close * 100
                 change = price - prev_close
+
+                # Format market cap with commas
+                market_cap_raw = info.get("marketCap", 0)
+                market_cap = f"{market_cap_raw:,}" if market_cap_raw else "N/A"
+
                 movers.append({
                     "symbol": sym,
                     "name": info.get("longName", sym),
@@ -173,7 +179,7 @@ def get_market_movers(n=20):
                     "change": round(change, 2),
                     "change_percent": f"{change_percent:+.2f}%",
                     "volume": info.get("volume", 0),
-                    "market_cap": info.get("marketCap", 0),
+                    "market_cap": market_cap,
                     "sector": info.get("sector", "N/A")
                 })
         except Exception as e:
