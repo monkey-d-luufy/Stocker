@@ -132,75 +132,43 @@ def get_trending_stocks():
 
     return trending_stocks
 
-def get_market_movers():
-    """Get daily market movers - biggest gainers and losers"""
-    import random
+def get_market_movers(n=20):
+    """
+    Returns top n gainers and top n losers with live data
+    """
+    # Define your stock universe; can be S&P500 or full exchange list
+    universe = ["AAPL","MSFT","TSLA","NFLX","GOOGL","AMZN","META","NVDA","INTC",
+                "AMD","PYPL","ADBE","CRM","UBER","LYFT","SPOT","SHOP","SQ","ZM","DOCU",
+                "MRNA","RIOT","AMC","GME","PLTR","PLUG","BBBY","WISH","CLOV","SPCE"]  # etc.
 
-    # Generate realistic market movers data
-    gainers = []
-    losers = []
+    movers = []
+    for sym in universe:
+        try:
+            ticker = yf.Ticker(sym)
+            info = ticker.info
+            price = info.get("regularMarketPrice")
+            prev_close = info.get("previousClose")
+            if price and prev_close:
+                change_percent = (price - prev_close) / prev_close * 100
+                change = price - prev_close
+                movers.append({
+                    "symbol": sym,
+                    "name": info.get("longName", sym),
+                    "price": round(price, 2),
+                    "change": round(change, 2),
+                    "change_percent": f"{change_percent:+.2f}%",
+                    "volume": info.get("volume", 0),
+                    "market_cap": info.get("marketCap", 0),
+                    "sector": info.get("sector", "N/A")
+                })
+        except Exception as e:
+            print(f"Error fetching {sym}: {e}")
 
-    # Top gainers
-    gainer_symbols = ['MRNA', 'RIOT', 'AMC', 'GME', 'PLTR', 'PLUG', 'BBBY', 'WISH', 'CLOV', 'SPCE']
-    gainer_names = [
-        'Moderna Inc.', 'Riot Platforms', 'AMC Entertainment', 'GameStop Corp.', 'Palantir Technologies',
-        'Plug Power Inc.', 'Bed Bath & Beyond', 'ContextLogic Inc.', 'Clover Health', 'Virgin Galactic'
-    ]
+    # Sort movers by percentage change
+    gainers = sorted(movers, key=lambda x: x["change_percent"], reverse=True)[:n]
+    losers = sorted(movers, key=lambda x: x["change_percent"])[:n]
 
-    # Add more symbols and names for 20 gainers
-    gainer_symbols = ['MRNA', 'RIOT', 'AMC', 'GME', 'PLTR', 'PLUG', 'BBBY', 'WISH', 'CLOV', 'SPCE',
-                     'TLRY', 'SNDL', 'BB', 'NOK', 'MVIS', 'FUBO', 'WORX', 'IDEX', 'GNUS', 'XSPA']
-    gainer_names = [
-        'Moderna Inc.', 'Riot Platforms', 'AMC Entertainment', 'GameStop Corp.', 'Palantir Technologies',
-        'Plug Power Inc.', 'Bed Bath & Beyond', 'ContextLogic Inc.', 'Clover Health', 'Virgin Galactic',
-        'Tilray Inc.', 'Sundial Growers', 'BlackBerry Ltd.', 'Nokia Corp.', 'MicroVision Inc.',
-        'fuboTV Inc.', 'SCWorx Corp.', 'Ideanomics Inc.', 'Genius Brands', 'XpresSpa Group'
-    ]
-
-    for i in range(20):
-        change_percent = random.uniform(8, 25)
-        price = random.uniform(5, 200)
-        change = price * (change_percent / 100)
-        gainers.append({
-            'symbol': gainer_symbols[i],
-            'name': gainer_names[i],
-            'price': round(price, 2),
-            'change': round(change, 2),
-            'change_percent': f'+{change_percent:.2f}%',
-            'volume': random.randint(5000000, 50000000),
-            'market_cap': f"{random.randint(1, 50)}B",
-            'sector': random.choice(['Technology', 'Healthcare', 'Entertainment', 'Energy'])
-        })
-
-    # Top losers
-    loser_symbols = ['NFLX', 'SNAP', 'COIN', 'HOOD', 'ROKU', 'ZOOM', 'PTON', 'UBER', 'LYFT', 'ABNB',
-                    'TWTR', 'SPOT', 'SQ', 'SHOP', 'DOCU', 'ZM', 'WORK', 'PINS', 'DKNG', 'CRWD']
-    loser_names = [
-        'Netflix Inc.', 'Snap Inc.', 'Coinbase Global', 'Robinhood Markets', 'Roku Inc.',
-        'Zoom Video', 'Peloton Interactive', 'Uber Technologies', 'Lyft Inc.', 'Airbnb Inc.',
-        'Twitter Inc.', 'Spotify Technology', 'Block Inc.', 'Shopify Inc.', 'DocuSign Inc.',
-        'Zoom Video Communications', 'Slack Technologies', 'Pinterest Inc.', 'DraftKings Inc.', 'CrowdStrike Holdings'
-    ]
-
-    for i in range(20):
-        change_percent = random.uniform(-20, -5)
-        price = random.uniform(10, 300)
-        change = price * (change_percent / 100)
-        losers.append({
-            'symbol': loser_symbols[i],
-            'name': loser_names[i],
-            'price': round(price, 2),
-            'change': round(change, 2),
-            'change_percent': f'{change_percent:.2f}%',
-            'volume': random.randint(3000000, 40000000),
-            'market_cap': f"{random.randint(5, 200)}B",
-            'sector': random.choice(['Technology', 'Communication Services', 'Consumer Cyclical', 'Financial Services'])
-        })
-
-    return {
-        'gainers': gainers,
-        'losers': losers
-    }
+    return {"gainers": gainers, "losers": losers}
 
 def get_exchange_data():
     """Get stocks by exchange (NYSE, NASDAQ, AMEX)"""
@@ -458,19 +426,27 @@ def get_ai_insights(stock_data):
     return " ".join(insights)
 
 def fetch_quote(sym):
-    # TODO: Replace with your real data source call
-    # Must return *current* values
-    return {
-        "symbol": sym,
-        "name": {"AAPL":"Apple Inc.","NFLX":"Netflix Inc.","TSLA":"Tesla Inc."}.get(sym, sym),
-        "price": 173.25,
-        "change": -1.23,
-        "change_percent": -0.71,
-        "volume": 30044292,
-        "market_cap": 160_000_000_000,
-        "sector": "Technology",
-        "as_of": datetime.utcnow().isoformat()+"Z"
-    }
+    try:
+        ticker = yf.Ticker(sym)
+        hist = ticker.history(period="1d")
+        price = hist['Close'].iloc[-1] if not hist.empty else None
+
+        info = ticker.info
+
+        return {
+            "symbol": sym,
+            "name": info.get("longName", sym),
+            "price": float(price) if price else None,
+            "change": info.get("regularMarketChange", 0.0),
+            "change_percent": info.get("regularMarketChangePercent", 0.0),
+            "volume": info.get("volume", 0),
+            "market_cap": info.get("marketCap", 0),
+            "sector": info.get("sector", "N/A"),
+            "as_of": datetime.utcnow().isoformat() + "Z"
+        }
+    except Exception as e:
+        print(f"[fetch_quote ERROR] {sym}: {e}")
+        return {"symbol": sym, "price": None}
 
 @app.route('/')
 def index():
@@ -531,11 +507,10 @@ def get_trending():
         
 @app.route('/api/market-movers')
 def get_market_movers_api():
-    """API endpoint to get daily market movers"""
-    movers = get_market_movers()
+    movers = get_market_movers(n=20)  # top 20 gainers/losers
     return jsonify({
-        'market_movers': movers,
-        'timestamp': datetime.now().isoformat()
+        "market_movers": movers,
+        "timestamp": datetime.now().isoformat()
     })
 
 @app.route('/api/exchanges')
