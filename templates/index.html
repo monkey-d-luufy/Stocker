@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Stock Tracker</title>
     <style>
+        /* Hide trending stocks initially to prevent flash of unstyled content */
+        #trendingStocks {
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        #trendingStocks.visible {
+            visibility: visible;
+            opacity: 1;
+        }
         * {
             margin: 0;
             padding: 0;
@@ -1192,7 +1203,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 `;
                 
                 container.appendChild(card);
-            });      
+            });
+            
+            // Reveal the container after content is loaded
+            container.classList.add("visible");          
         })
         .catch(err => {
             console.error("❌ Failed to load trending stocks:", err);
