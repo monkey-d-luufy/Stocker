@@ -672,11 +672,13 @@
                 <button id="searchBtn">🔍 Analyze</button>
             </div>
         </div>
-        
+
         <div class="trending-section">
-            <h2>🔥 Trending Stocks</h2>
+            <div id="trendingWrapper" style="display:none; opacity:0; transition: opacity 0.5s ease;">
+                <h2>🔥 Trending Stocks</h2>
                 <div id="trendingStocks" class="trending-stocks-container"></div>
-                <div id="trendingError" style="display:none;"></div>
+            </div>
+            <div id="trendingError" style="display:none;"></div>
         </div>
 
         <div class="market-movers-section">
@@ -1205,8 +1207,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 container.appendChild(card);
             });
             
-            // Reveal the container after content is loaded
-            container.classList.add("visible");          
+            // Reveal entire section after cards are ready
+            wrapper.style.display = "block";
+            setTimeout(() => wrapper.style.opacity = 1, 50);
+            
         })
         .catch(err => {
             console.error("❌ Failed to load trending stocks:", err);
