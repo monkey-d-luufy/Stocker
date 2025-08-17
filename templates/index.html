@@ -1160,22 +1160,20 @@ async function loadTrendingStocks() {
 
   window.onload = loadTrending;
 </script>
-    
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-    const container = document.getElementById("trendingStocks");
-    if (!container) return;
+    fetch('/api/trending')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            const stocks = data.trending_stocks; // ✅ match backend key
+           const container = document.getElementById("trendingStocks");
 
-    async function refreshTrending() {
-        try {
-            const res = await fetch('/api/trending', { cache: "no-store" });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            const stocks = data.trending_stocks;
-            if (!stocks) return;
-
-            container.innerHTML = ""; // clear old cards
-
+            container.innerHTML = ""; // clear before rendering
             stocks.forEach(stock => {
                 const card = document.createElement("div");
                 card.className = "mover-card top-card";
@@ -1184,26 +1182,23 @@ document.addEventListener("DOMContentLoaded", () => {
                 card.innerHTML = `
                     <div class="mover-header">
                         <span class="mover-symbol">${stock.symbol}</span>
-                        <span class="mover-price">$${Number(stock.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                        <span class="mover-price">$${stock.price}</span>
                     </div>
                     <div class="mover-name">${stock.name}</div>
                     <div class="mover-change ${stock.change >= 0 ? 'positive' : 'negative'}">
-                        ${stock.change.toFixed(2)} (${stock.change_percent.toFixed(2)}%)
+                        ${stock.change} (${stock.change_percent})
                     </div>
+                    <div class="mover-details" style="display:none;"></div>
                 `;
-
+                
                 container.appendChild(card);
-            });
-        } catch (err) {
+            });      
+        })
+        .catch(err => {
             console.error("❌ Failed to load trending stocks:", err);
-        }
-    }
-
-    refreshTrending();
-    setInterval(refreshTrending, 60_000); // update every 60s
+        });
 });
 </script>
-
     
 <script>
 async function loadTrendingStocks() {
