@@ -674,7 +674,7 @@
 
         <div class="trending-section">
             <h2>🔥 Trending Stocks</h2>
-            <div id="trendingStocks" class="trending-stocks-container" style="opacity:0; transition: opacity 0.5s ease;"></div>
+            <div id="trendingStocks" class="trending-stocks-container"></div>
             <div id="trendingError" style="display:none;"></div>
         </div>
 
@@ -1204,7 +1204,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 container.appendChild(card);
             });
             
-            // make visible
+            // Only after cards are appended, reveal container
             container.classList.add("visible");   
         })
         .catch(err => {
