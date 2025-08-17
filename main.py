@@ -458,19 +458,40 @@ def get_ai_insights(stock_data):
     return " ".join(insights)
 
 def fetch_quote(sym):
-    # TODO: Replace with your real data source call
-    # Must return *current* values
-    return {
-        "symbol": sym,
-        "name": {"AAPL":"Apple Inc.","NFLX":"Netflix Inc.","TSLA":"Tesla Inc."}.get(sym, sym),
-        "price": 173.25,
-        "change": -1.23,
-        "change_percent": -0.71,
-        "volume": 30044292,
-        "market_cap": 160_000_000_000,
-        "sector": "Technology",
-        "as_of": datetime.utcnow().isoformat()+"Z"
-    }
+    try:
+        ticker = yf.Ticker(sym)
+
+        # get today's trading data
+        hist = ticker.history(period="1d")
+        price = hist['Close'].iloc[-1] if not hist.empty else None
+
+        info = ticker.info
+
+        return {
+            "symbol": sym,
+            "name": info.get("longName", sym),
+            "price": float(price) if price else None,
+            "change": info.get("regularMarketChange", 0.0),
+            "change_percent": info.get("regularMarketChangePercent", 0.0),
+            "volume": info.get("volume", 0),
+            "market_cap": info.get("marketCap", 0),
+            "sector": info.get("sector", "N/A"),
+            "as_of": datetime.utcnow().isoformat() + "Z"
+        }
+
+    except Exception as e:
+        print(f"⚠️ Error fetching {sym}: {e}")
+        return {
+            "symbol": sym,
+            "name": sym,
+            "price": None,
+            "change": 0.0,
+            "change_percent": 0.0,
+            "volume": 0,
+            "market_cap": 0,
+            "sector": "N/A",
+            "as_of": datetime.utcnow().isoformat() + "Z"
+        }
 
 @app.route('/')
 def index():
