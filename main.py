@@ -4,6 +4,7 @@ import json
 import yfinance as yf
 from datetime import datetime, timedelta
 import os
+import math
 
 cached_trending = None
 last_fetch_time = None
@@ -456,6 +457,21 @@ def get_ai_insights(stock_data):
 
     return " ".join(insights)
 
+def fetch_quote(sym):
+    # TODO: Replace with your real data source call
+    # Must return *current* values
+    return {
+        "symbol": sym,
+        "name": {"AAPL":"Apple Inc.","NFLX":"Netflix Inc.","TSLA":"Tesla Inc."}.get(sym, sym),
+        "price": 173.25,
+        "change": -1.23,
+        "change_percent": -0.71,
+        "volume": 30044292,
+        "market_cap": 160_000_000_000,
+        "sector": "Technology",
+        "as_of": datetime.utcnow().isoformat()+"Z"
+    }
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -560,6 +576,16 @@ def add_to_watchlist():
 
     # In a real app, you'd store this in a database
     return jsonify({'message': f'{symbol} added to watchlist', 'symbol': symbol})
+
+@app.get("/api/quotes")
+def get_quotes():
+    symbols = request.args.get("symbols","").upper().replace(" ", "")
+    syms = [s for s in symbols.split(",") if s]
+    data = { s: fetch_quote(s) for s in syms }
+    resp = jsonify({"quotes": data})
+    # Prevent CDN/browser from serving stale results
+    resp.headers["Cache-Control"] = "no-store, max-age=0"
+    return resp
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
