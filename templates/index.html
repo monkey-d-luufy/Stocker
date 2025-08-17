@@ -7,13 +7,13 @@
     <style>
         /* Hide trending stocks initially to prevent flash of unstyled content */
         #trendingStocks {
-            visibility: hidden;
+            display: none;   /* hidden by default */
             opacity: 0;
             transition: opacity 0.5s ease;
         }
         
         #trendingStocks.visible {
-            visibility: visible;
+            display: grid;   /* show when content is ready */
             opacity: 1;
         }
         * {
