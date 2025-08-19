@@ -7,15 +7,14 @@
     <style>
         /* Hide trending stocks initially to prevent flash of unstyled content */
         #trendingStocks {
-            opacity: 0;                  /* hide initially */
-            display: grid;               /* grid layout ready immediately */
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
+            display: none;       /* hide completely until JS runs */
+            opacity: 0;
             transition: opacity 0.5s ease;
         }
         
         #trendingStocks.visible {
-            opacity: 1;                  /* fade in */
+            display: grid;       /* show grid layout when ready */
+            opacity: 1;
         }
 
         body {
@@ -1171,11 +1170,6 @@ async function loadTrendingStocks() {
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     const container = document.getElementById("trendingStocks");
-    const errorDiv = document.getElementById("trendingError");
-
-    // Keep hidden initially
-    container.classList.remove("visible");
-    container.innerHTML = "";
 
     fetch('/api/trending')
         .then(response => {
@@ -1183,13 +1177,8 @@ document.addEventListener("DOMContentLoaded", () => {
             return response.json();
         })
         .then(data => {
-            const stocks = data.trending_stocks; // ✅ match backend key
-
-            if (!stocks || stocks.length === 0) {
-                errorDiv.style.display = "block";
-                errorDiv.textContent = "No trending stocks available.";
-                return;
-            }
+            const stocks = data.trending_stocks;
+            container.innerHTML = "";
 
             stocks.forEach(stock => {
                 const card = document.createElement("div");
@@ -1205,19 +1194,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="mover-change ${stock.change >= 0 ? 'positive' : 'negative'}">
                         ${stock.change} (${stock.change_percent})
                     </div>
-                    <div class="mover-details" style="display:none;"></div>
                 `;
 
                 container.appendChild(card);
             });
 
-            // Fade in the container after all cards are added
+            // Now reveal container with fade-in
             container.classList.add("visible");
         })
         .catch(err => {
             console.error("❌ Failed to load trending stocks:", err);
-            errorDiv.style.display = "block";
-            errorDiv.textContent = "Failed to load trending stocks.";
         });
 });
 </script>
