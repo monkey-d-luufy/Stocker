@@ -345,6 +345,7 @@
         }
 
         .movers-container {
+            width: 100%;
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 30px;
@@ -379,6 +380,8 @@
         .mover-card {
             background: white;
             border-radius: 10px;
+            width: 100%; /* fill its grid column */
+            box-sizing: border-box; /* include padding in width */
             padding: 20px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.1);
             cursor: pointer;
@@ -652,6 +655,10 @@
 
             .exchange-stock-details {
                 grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 480px) {
+            .movers-container { grid-template-columns: 1fr; gap: 15px; 
             }
         }
     </style>
