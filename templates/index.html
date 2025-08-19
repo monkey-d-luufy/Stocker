@@ -7,18 +7,15 @@
     <style>
         /* Hide trending stocks initially to prevent flash of unstyled content */
         #trendingStocks {
-            display: grid; /* keep grid layout from the start */
-            opacity: 0;
+            opacity: 0;                  /* hide initially */
+            display: grid;               /* grid layout ready immediately */
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
             transition: opacity 0.5s ease;
         }
         
         #trendingStocks.visible {
-            opacity: 1; /* fade in */
-        }
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+            opacity: 1;                  /* fade in */
         }
 
         body {
