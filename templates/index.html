@@ -336,6 +336,8 @@
         .market-movers-section {
             padding: 30px;
             border-bottom: 1px solid #eee;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .market-movers-section h2 {
@@ -348,8 +350,8 @@
             width: 100%;
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 30px;
-            max-width: 1000px;
+            gap: 20px;
+            max-width: 100%;
             margin: 0 auto;
             padding: 0 10px;  
         }
@@ -632,7 +634,7 @@
 
             .movers-container {
                 grid-template-columns: 1fr;
-                gap: 20px;
+                gap: 15px;
             }
 
             .mover-details {
@@ -658,7 +660,9 @@
             }
         }
         @media (max-width: 480px) {
-            .movers-container { grid-template-columns: 1fr; gap: 15px; 
+            .movers-container { 
+                grid-template-columns: 1fr; 
+                gap: 10px; 
             }
         }
     </style>
