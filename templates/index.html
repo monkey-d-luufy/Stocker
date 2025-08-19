@@ -1170,20 +1170,30 @@ async function loadTrendingStocks() {
 
   window.onload = loadTrending;
 </script>
+
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+    const container = document.getElementById("trendingStocks");
+    const errorDiv = document.getElementById("trendingError");
+
+    // Keep hidden initially
+    container.classList.remove("visible");
+    container.innerHTML = "";
+
     fetch('/api/trending')
         .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             return response.json();
         })
         .then(data => {
             const stocks = data.trending_stocks; // ✅ match backend key
-           const container = document.getElementById("trendingStocks");
 
-            container.innerHTML = ""; // clear before rendering
+            if (!stocks || stocks.length === 0) {
+                errorDiv.style.display = "block";
+                errorDiv.textContent = "No trending stocks available.";
+                return;
+            }
+
             stocks.forEach(stock => {
                 const card = document.createElement("div");
                 card.className = "mover-card top-card";
@@ -1200,15 +1210,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     </div>
                     <div class="mover-details" style="display:none;"></div>
                 `;
-                
+
                 container.appendChild(card);
             });
-            
-            // Only after cards are appended, reveal container
-            container.classList.add("visible");   
+
+            // Fade in the container after all cards are added
+            container.classList.add("visible");
         })
         .catch(err => {
             console.error("❌ Failed to load trending stocks:", err);
+            errorDiv.style.display = "block";
+            errorDiv.textContent = "Failed to load trending stocks.";
         });
 });
 </script>
