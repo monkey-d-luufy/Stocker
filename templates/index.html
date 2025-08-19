@@ -634,8 +634,10 @@
             }
 
             .movers-container {
-                grid-template-columns: 1fr;
-                gap: 15px;
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 20px;
+                width: 100%;
             }
 
             .mover-details {
@@ -669,6 +671,11 @@
                 padding: 15px;  /* reduce padding so it fits better */
             }
         }
+        .market-movers-section, .movers-container {
+        height: auto !important;
+        overflow: visible !important;
+    }
+
     </style>
 </head>
 <body>
