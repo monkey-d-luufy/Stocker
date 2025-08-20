@@ -334,12 +334,8 @@
 
         /* Market Movers Styles */
         .market-movers-section {
-            height: auto !important;       /* remove fixed height */
-            overflow: visible !important;  /* ensure content isn’t clipped */
-            padding: 20px;
+            padding: 30px;
             border-bottom: 1px solid #eee;
-            width: 100%;
-            box-sizing: border-box;
         }
 
         .market-movers-section h2 {
@@ -349,15 +345,11 @@
         }
 
         .movers-container {
-            width: 100%;
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 30px;
-            max-width: 100%;
-            box-sizing: border-box;
+            max-width: 1000px;
             margin: 0 auto;
-            padding: 0 10px;
-            height: auto; /* important to allow growth */
         }
 
         .movers-column h3 {
@@ -385,19 +377,17 @@
 
         .mover-card {
             background: white;
-            min-height: 0;       /* ensure no minimum height cuts off content */
             border-radius: 10px;
-            width: 100%; /* fill its grid column */
-            box-sizing: border-box; /* include padding in width */
             padding: 20px;
             box-shadow: 0 3px 10px rgba(0,0,0,0.1);
             cursor: pointer;
             transition: transform 0.3s, box-shadow 0.3s;
             border-left: 5px solid;
-            min-width: 0;               /* allow card content to shrink */
-            word-wrap: break-word;      /* break long text */
+            width: 100%;
+            box-sizing: border-box;
         }
 
+        /* Color coding for gainers and losers */
         .gainer-card {
             border-left-color: #4CAF50;
         }
@@ -666,20 +656,21 @@
                 grid-template-columns: 1fr;
             }
         }
-        @media (max-width: 600px) {
-            .movers-container { 
-                grid-template-columns: 1fr; 
-                gap: 20px; 
+        /* Responsive adjustments for smaller screens */
+        @media (max-width: 768px) {
+            .movers-container {
+                grid-template-columns: 1fr; /* stack cards vertically */
+                gap: 20px;
             }
+        
+            .mover-details {
+                grid-template-columns: 1fr;
+            }
+        
             .mover-card {
-                width: 100%;
-                padding: 15px;  /* reduce padding so it fits better */
+                padding: 15px;
             }
         }
-        .market-movers-section, .movers-container {
-        height: auto !important;
-        overflow: visible !important;
-    }
 
     </style>
 </head>
