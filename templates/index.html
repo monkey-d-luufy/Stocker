@@ -630,11 +630,21 @@
 
             .movers-container {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 20px;
+                grid-template-columns: 1fr; /* stack the two columns vertically */
+                gap: 15px;
+            }
+            .movers-column {
+                width: 100%; /* ensure full width */
+            }
+            .movers-list {
+                display: grid;
+                grid-template-columns: 1fr; /* stack cards vertically */
+                gap: 15px;
             }
 
             .mover-card {
+                width: 100%; /* make sure card fills container */
+                box-sizing: border-box;
                 padding: 15px;
             }
             
@@ -662,19 +672,15 @@
         }
         /* Responsive adjustments for smaller screens */
         @media (max-width: 480px) {
-            .movers-container {
-                grid-template-columns: 1fr; /* stack cards vertically */
-                gap: 15px;
-            }     
-       
-            .mover-card {
-                padding: 12px;
-            }
-            
-            .mover-details {
-                grid-template-columns: 1fr;
-            }
+            .movers-column h3 {
+            font-size: 1em;
+            padding: 10px;
         }
+    
+        .mover-card {
+            padding: 12px;
+        }
+    }
 
     </style>
 </head>
