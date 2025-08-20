@@ -629,7 +629,7 @@
             }
 
             .movers-container {
-                display: grid;
+                display: flex;
                 grid-template-columns: 1fr; /* stack the two columns vertically */
                 gap: 15px;
             }
@@ -672,16 +672,35 @@
         }
         /* Responsive adjustments for smaller screens */
         @media (max-width: 480px) {
+            /* Adjust header inside movers columns */
             .movers-column h3 {
-            font-size: 1em;
-            padding: 10px;
+                font-size: 1em;
+                padding: 10px;
+            }
+        
+            /* Stack movers columns vertically */
+            .movers-container {
+                display: flex;
+                flex-direction: column; /* stack the two columns */
+                gap: 10px;
+                width: 100%;
+            }
+        
+            /* Stack individual cards vertically inside each column */
+            .movers-list {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+        
+            /* Make each card fill the container */
+            .mover-card {
+                width: 100%;
+                padding: 12px;
+                box-sizing: border-box;
+            }
         }
-    
-        .mover-card {
-            padding: 12px;
-        }
-    }
-
+        
     </style>
 </head>
 <body>
