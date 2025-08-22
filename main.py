@@ -154,8 +154,6 @@ def get_market_movers(n=20):
         return market_movers_cache["data"]
 
     universe = get_sp500_symbols()
-    
-    # Fetch all tickers at once
     data = yf.download(universe, period="2d", group_by="ticker", threads=True, progress=False)
 
     movers = []
@@ -167,27 +165,37 @@ def get_market_movers(n=20):
                 price = df['Close'][-1]
                 change = price - prev_close
                 change_percent = (change / prev_close) * 100
-
-                ticker = yf.Ticker(sym)
-                info = ticker.info
-                market_cap_raw = info.get("marketCap", 0)
-                market_cap = f"{market_cap_raw:,}" if market_cap_raw else "N/A"
-
                 movers.append({
                     "symbol": sym,
-                    "name": info.get("longName", sym),
                     "price": round(price, 2),
                     "change": round(change, 2),
-                    "change_percent": f"{change_percent:+.2f}%",
-                    "volume": info.get("volume", 0),
-                    "market_cap": market_cap,
-                    "sector": info.get("sector", "N/A")
+                    "change_percent": change_percent
                 })
-        except Exception as e:
-            print(f"Error fetching {sym}: {e}")
+        except Exception:
+            continue
 
-    gainers = sorted(movers, key=lambda x: float(x["change_percent"].replace('%','')), reverse=True)[:n]
-    losers = sorted(movers, key=lambda x: float(x["change_percent"].replace('%','')))[:n]
+    # Sort and select top n
+    gainers = sorted(movers, key=lambda x: x["change_percent"], reverse=True)[:n]
+    losers = sorted(movers, key=lambda x: x["change_percent"])[:n]
+
+    # Fetch info only for top gainers/losers
+    for stock in gainers + losers:
+        try:
+            info = yf.Ticker(stock["symbol"]).info
+            market_cap_raw = info.get("marketCap", 0)
+            stock.update({
+                "name": info.get("longName", stock["symbol"]),
+                "volume": info.get("volume", 0),
+                "market_cap": f"{market_cap_raw:,}" if market_cap_raw else "N/A",
+                "sector": info.get("sector", "N/A")
+            })
+        except Exception:
+            stock.update({
+                "name": stock["symbol"],
+                "volume": 0,
+                "market_cap": "N/A",
+                "sector": "N/A"
+            })
 
     result = {"gainers": gainers, "losers": losers}
     market_movers_cache["data"] = result
