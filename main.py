@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import requests
 import json
+import pandas as pd
 import yfinance as yf
 from datetime import datetime, timedelta
 import os
@@ -25,6 +26,13 @@ ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
 
 # OpenAI-style API for AI insights (you can use OpenAI, Groq, or other providers)
 AI_API_KEY = os.getenv("AI_API_KEY", "")  # Set this in Secrets
+
+def get_sp500_symbols():
+    """Fetch the current S&P 500 tickers from Wikipedia."""
+    url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+    table = pd.read_html(url)[0]
+    symbols = table['Symbol'].tolist()
+    return symbols
 
 def get_stock_data(symbol):
     """Fetch stock price data using Yahoo Finance"""
@@ -141,6 +149,7 @@ def get_trending_stocks():
     return trending_stocks
 
 def get_market_movers(n=20):
+    """Return top n gainers and losers for the S&P 500, with caching."""
     global market_movers_cache
     current_time = time.time()
 
@@ -148,20 +157,20 @@ def get_market_movers(n=20):
     if market_movers_cache["data"] and (current_time - market_movers_cache["timestamp"] < CACHE_DURATION):
         return market_movers_cache["data"]
 
-    # Fetch all S&P 500 tickers (example list, replace with your full list)
-    sp500_universe = ["AAPL","MSFT","TSLA","AMZN","GOOGL","FB","NVDA","JNJ","V","PG", ...]  # etc.
+    # Get S&P 500 tickers dynamically
+    universe = get_sp500_symbols()
 
-    tickers = yf.Tickers(" ".join(sp500_universe))
     movers = []
-
-    for sym, ticker in tickers.tickers.items():
+    for sym in universe:
         try:
+            ticker = yf.Ticker(sym)
             info = ticker.info
             price = info.get("regularMarketPrice")
             prev_close = info.get("previousClose")
             if price and prev_close:
                 change_percent = (price - prev_close) / prev_close * 100
                 change = price - prev_close
+
                 market_cap_raw = info.get("marketCap", 0)
                 market_cap = f"{market_cap_raw:,}" if market_cap_raw else "N/A"
 
@@ -178,11 +187,9 @@ def get_market_movers(n=20):
         except Exception as e:
             print(f"Error fetching {sym}: {e}")
 
-    # Sort movers by percentage change
-    gainers = sorted([m for m in movers if float(m["change_percent"].replace('%','')) > 0],
-                     key=lambda x: float(x["change_percent"].replace('%','')), reverse=True)[:n]
-    losers = sorted([m for m in movers if float(m["change_percent"].replace('%','')) < 0],
-                    key=lambda x: float(x["change_percent"].replace('%','')))[:n]
+    # Sort and get top n
+    gainers = sorted(movers, key=lambda x: float(x["change_percent"].replace('%','')), reverse=True)[:n]
+    losers = sorted(movers, key=lambda x: float(x["change_percent"].replace('%','')))[:n]
 
     result = {"gainers": gainers, "losers": losers}
 
