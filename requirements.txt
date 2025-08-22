@@ -12,3 +12,5 @@ urllib3==2.5.0
 Werkzeug==3.1.3
 gunicorn
 yfinance
+pandas
+lxml
