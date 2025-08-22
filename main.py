@@ -27,10 +27,14 @@ ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
 # OpenAI-style API for AI insights (you can use OpenAI, Groq, or other providers)
 AI_API_KEY = os.getenv("AI_API_KEY", "")  # Set this in Secrets
 
-def get_sp500_symbols():
+def get_sp500_tickers():
     url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-    table = pd.read_html(url)[0]
-    return table['Symbol'].tolist()
+    table = pd.read_html(url)[0]   # first table on the page
+    tickers = table['Symbol'].tolist()
+    return tickers
+
+# 2️⃣ Fetch the tickers once
+sp500_universe = get_sp500_tickers()
 
 def get_stock_data(symbol):
     """Fetch stock price data using Yahoo Finance"""
@@ -147,28 +151,41 @@ def get_trending_stocks():
     return trending_stocks
 
 def get_market_movers(n=20):
+    """
+    Efficiently returns top n gainers and losers for S&P 500 tickers.
+    Only fetches minimal data for all tickers, then enriches top N with info.
+    """
     global market_movers_cache
     current_time = time.time()
 
+    # Return cached data if still valid
     if market_movers_cache["data"] and (current_time - market_movers_cache["timestamp"] < CACHE_DURATION):
         return market_movers_cache["data"]
 
-    universe = get_sp500_symbols()
+    # Step 1: Fetch only recent close prices for all tickers
     try:
-        data = yf.download(universe, period="2d", group_by="ticker", threads=True, progress=False)
+        data = yf.download(
+            tickers=sp500_universe,
+            period="2d",
+            interval="1d",
+            group_by='ticker',
+            threads=True,
+            progress=False
+        )
     except Exception as e:
-        print("Download failed:", e)
+        print("Error fetching price data:", e)
         return {"gainers": [], "losers": []}
 
     movers = []
-    for sym in universe:
+    for sym in sp500_universe:
         try:
-            df = data[sym]
-            if 'Close' in df and len(df['Close']) >= 2:
-                prev_close = df['Close'][-2]
-                price = df['Close'][-1]
+            close_prices = data[sym]["Close"]
+            if len(close_prices) >= 2:
+                prev_close = close_prices[-2]
+                price = close_prices[-1]
                 change = price - prev_close
                 change_percent = (change / prev_close) * 100
+
                 movers.append({
                     "symbol": sym,
                     "price": round(price, 2),
@@ -176,33 +193,28 @@ def get_market_movers(n=20):
                     "change_percent": change_percent
                 })
         except Exception:
-            continue
+            continue  # skip tickers with missing data
 
-    if not movers:
-        return {"gainers": [], "losers": []}
-
+    # Step 2: Sort to find top gainers and losers
     gainers = sorted(movers, key=lambda x: x["change_percent"], reverse=True)[:n]
     losers = sorted(movers, key=lambda x: x["change_percent"])[:n]
 
+    # Step 3: Fetch detailed info for top gainers/losers only
     for stock in gainers + losers:
         try:
             info = yf.Ticker(stock["symbol"]).info
+            stock["name"] = info.get("longName", stock["symbol"])
             market_cap_raw = info.get("marketCap", 0)
-            stock.update({
-                "name": info.get("longName", stock["symbol"]),
-                "volume": info.get("volume", 0),
-                "market_cap": f"{market_cap_raw:,}" if market_cap_raw else "N/A",
-                "sector": info.get("sector", "N/A")
-            })
+            stock["market_cap"] = f"{market_cap_raw:,}" if market_cap_raw else "N/A"
+            stock["volume"] = info.get("volume", 0)
         except Exception:
-            stock.update({
-                "name": stock["symbol"],
-                "volume": 0,
-                "market_cap": "N/A",
-                "sector": "N/A"
-            })
+            stock["name"] = stock["symbol"]
+            stock["market_cap"] = "N/A"
+            stock["volume"] = 0
 
     result = {"gainers": gainers, "losers": losers}
+
+    # Update cache
     market_movers_cache["data"] = result
     market_movers_cache["timestamp"] = current_time
 
