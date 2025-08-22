@@ -17,7 +17,7 @@ market_movers_cache = {
     "data": None,
     "timestamp": 0
 }
-CACHE_DURATION = 5 * 60  # cache for 5 minutes (300 seconds)
+CACHE_DURATION = 60  # seconds
 
 # Alpha Vantage API for stock data (free tier available)
 ALPHA_VANTAGE_API_KEY = "demo"  # Replace with your API key
@@ -141,10 +141,6 @@ def get_trending_stocks():
     return trending_stocks
 
 def get_market_movers(n=20):
-    """
-    Returns top n gainers and top n losers with live data, using cache,
-    and formats market cap with commas.
-    """
     global market_movers_cache
     current_time = time.time()
 
@@ -152,23 +148,20 @@ def get_market_movers(n=20):
     if market_movers_cache["data"] and (current_time - market_movers_cache["timestamp"] < CACHE_DURATION):
         return market_movers_cache["data"]
 
-    # Define stock universe
-    universe = ["AAPL","MSFT","TSLA","NFLX","GOOGL","AMZN","META","NVDA","INTC",
-                "AMD","PYPL","ADBE","CRM","UBER","LYFT","SPOT","SHOP","SQ","ZM","DOCU",
-                "MRNA","RIOT","AMC","GME","PLTR","PLUG","BBBY","WISH","CLOV","SPCE"]
+    # Fetch all S&P 500 tickers (example list, replace with your full list)
+    sp500_universe = ["AAPL","MSFT","TSLA","AMZN","GOOGL","FB","NVDA","JNJ","V","PG", ...]  # etc.
 
+    tickers = yf.Tickers(" ".join(sp500_universe))
     movers = []
-    for sym in universe:
+
+    for sym, ticker in tickers.tickers.items():
         try:
-            ticker = yf.Ticker(sym)
             info = ticker.info
             price = info.get("regularMarketPrice")
             prev_close = info.get("previousClose")
             if price and prev_close:
                 change_percent = (price - prev_close) / prev_close * 100
                 change = price - prev_close
-
-                # Format market cap with commas
                 market_cap_raw = info.get("marketCap", 0)
                 market_cap = f"{market_cap_raw:,}" if market_cap_raw else "N/A"
 
@@ -185,13 +178,11 @@ def get_market_movers(n=20):
         except Exception as e:
             print(f"Error fetching {sym}: {e}")
 
-    # Separate positive and negative movers
-    positive_movers = [m for m in movers if float(m["change_percent"].replace('%','')) > 0]
-    negative_movers = [m for m in movers if float(m["change_percent"].replace('%','')) < 0]
-
-    # Sort each group
-    gainers = sorted(positive_movers, key=lambda x: float(x["change_percent"].replace('%','')), reverse=True)[:n]
-    losers = sorted(negative_movers, key=lambda x: float(x["change_percent"].replace('%','')))[:n]
+    # Sort movers by percentage change
+    gainers = sorted([m for m in movers if float(m["change_percent"].replace('%','')) > 0],
+                     key=lambda x: float(x["change_percent"].replace('%','')), reverse=True)[:n]
+    losers = sorted([m for m in movers if float(m["change_percent"].replace('%','')) < 0],
+                    key=lambda x: float(x["change_percent"].replace('%','')))[:n]
 
     result = {"gainers": gainers, "losers": losers}
 
@@ -200,7 +191,6 @@ def get_market_movers(n=20):
     market_movers_cache["timestamp"] = current_time
 
     return result
-
     
 def get_exchange_data():
     """Get stocks by exchange (NYSE, NASDAQ, AMEX)"""
