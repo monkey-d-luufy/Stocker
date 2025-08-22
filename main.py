@@ -185,9 +185,13 @@ def get_market_movers(n=20):
         except Exception as e:
             print(f"Error fetching {sym}: {e}")
 
-    # Sort movers by percentage change
-    gainers = sorted(movers, key=lambda x: float(x["change_percent"].replace('%','')), reverse=True)[:n]
-    losers = sorted(movers, key=lambda x: float(x["change_percent"].replace('%','')))[:n]
+    # Separate positive and negative movers
+    positive_movers = [m for m in movers if float(m["change_percent"].replace('%','')) > 0]
+    negative_movers = [m for m in movers if float(m["change_percent"].replace('%','')) < 0]
+
+    # Sort each group
+    gainers = sorted(positive_movers, key=lambda x: float(x["change_percent"].replace('%','')), reverse=True)[:n]
+    losers = sorted(negative_movers, key=lambda x: float(x["change_percent"].replace('%','')))[:n]
 
     result = {"gainers": gainers, "losers": losers}
 
@@ -196,6 +200,7 @@ def get_market_movers(n=20):
     market_movers_cache["timestamp"] = current_time
 
     return result
+
     
 def get_exchange_data():
     """Get stocks by exchange (NYSE, NASDAQ, AMEX)"""
