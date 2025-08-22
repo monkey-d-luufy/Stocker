@@ -18,7 +18,7 @@ market_movers_cache = {
     "data": None,
     "timestamp": 0
 }
-CACHE_DURATION = 60  # seconds
+CACHE_DURATION = 300  # 5 minutes
 
 # Alpha Vantage API for stock data (free tier available)
 ALPHA_VANTAGE_API_KEY = "demo"  # Replace with your API key
@@ -28,11 +28,9 @@ ALPHA_VANTAGE_URL = "https://www.alphavantage.co/query"
 AI_API_KEY = os.getenv("AI_API_KEY", "")  # Set this in Secrets
 
 def get_sp500_symbols():
-    """Fetch the current S&P 500 tickers from Wikipedia."""
     url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
     table = pd.read_html(url)[0]
-    symbols = table['Symbol'].tolist()
-    return symbols
+    return table['Symbol'].tolist()
 
 def get_stock_data(symbol):
     """Fetch stock price data using Yahoo Finance"""
@@ -149,28 +147,29 @@ def get_trending_stocks():
     return trending_stocks
 
 def get_market_movers(n=20):
-    """Return top n gainers and losers for the S&P 500, with caching."""
     global market_movers_cache
     current_time = time.time()
 
-    # Return cached data if still valid
     if market_movers_cache["data"] and (current_time - market_movers_cache["timestamp"] < CACHE_DURATION):
         return market_movers_cache["data"]
 
-    # Get S&P 500 tickers dynamically
     universe = get_sp500_symbols()
+    
+    # Fetch all tickers at once
+    data = yf.download(universe, period="2d", group_by="ticker", threads=True, progress=False)
 
     movers = []
     for sym in universe:
         try:
-            ticker = yf.Ticker(sym)
-            info = ticker.info
-            price = info.get("regularMarketPrice")
-            prev_close = info.get("previousClose")
-            if price and prev_close:
-                change_percent = (price - prev_close) / prev_close * 100
+            df = data[sym]
+            if 'Close' in df and len(df['Close']) >= 2:
+                prev_close = df['Close'][-2]
+                price = df['Close'][-1]
                 change = price - prev_close
+                change_percent = (change / prev_close) * 100
 
+                ticker = yf.Ticker(sym)
+                info = ticker.info
                 market_cap_raw = info.get("marketCap", 0)
                 market_cap = f"{market_cap_raw:,}" if market_cap_raw else "N/A"
 
@@ -187,13 +186,10 @@ def get_market_movers(n=20):
         except Exception as e:
             print(f"Error fetching {sym}: {e}")
 
-    # Sort and get top n
     gainers = sorted(movers, key=lambda x: float(x["change_percent"].replace('%','')), reverse=True)[:n]
     losers = sorted(movers, key=lambda x: float(x["change_percent"].replace('%','')))[:n]
 
     result = {"gainers": gainers, "losers": losers}
-
-    # Update cache
     market_movers_cache["data"] = result
     market_movers_cache["timestamp"] = current_time
 
