@@ -1426,6 +1426,74 @@ document.addEventListener("DOMContentLoaded", () => {
   setInterval(refreshBottomCards, 60_000); // every 60s
 });
 </script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const topGainersContainer = document.getElementById("topGainers");
+    const topLosersContainer = document.getElementById("topLosers");
+
+    fetch('/api/market-movers')
+        .then(response => response.json())
+        .then(data => {
+            const movers = data.market_movers;
+
+            // Clear existing content
+            topGainersContainer.innerHTML = "";
+            topLosersContainer.innerHTML = "";
+
+            // Populate gainers
+            movers.gainers.forEach(stock => {
+                const card = document.createElement("div");
+                card.className = "mover-card gainer-card";
+                card.onclick = () => goToStockDetail(stock.symbol);
+
+                card.innerHTML = `
+                    <div class="mover-header">
+                        <span class="mover-symbol">${stock.symbol}</span>
+                        <span class="mover-price">$${stock.price}</span>
+                    </div>
+                    <div class="mover-name">${stock.name}</div>
+                    <div class="mover-change positive">
+                        ${stock.change} (${stock.change_percent})
+                    </div>
+                    <div class="mover-details">
+                        <div><strong>Volume:</strong> ${stock.volume.toLocaleString()}</div>
+                        <div><strong>Market Cap:</strong> ${stock.market_cap}</div>
+                        <div><strong>Sector:</strong> ${stock.sector}</div>
+                    </div>
+                `;
+                topGainersContainer.appendChild(card);
+            });
+
+            // Populate losers
+            movers.losers.forEach(stock => {
+                const card = document.createElement("div");
+                card.className = "mover-card loser-card";
+                card.onclick = () => goToStockDetail(stock.symbol);
+
+                card.innerHTML = `
+                    <div class="mover-header">
+                        <span class="mover-symbol">${stock.symbol}</span>
+                        <span class="mover-price">$${stock.price}</span>
+                    </div>
+                    <div class="mover-name">${stock.name}</div>
+                    <div class="mover-change negative">
+                        ${stock.change} (${stock.change_percent})
+                    </div>
+                    <div class="mover-details">
+                        <div><strong>Volume:</strong> ${stock.volume.toLocaleString()}</div>
+                        <div><strong>Market Cap:</strong> ${stock.market_cap}</div>
+                        <div><strong>Sector:</strong> ${stock.sector}</div>
+                    </div>
+                `;
+                topLosersContainer.appendChild(card);
+            });
+        })
+        .catch(err => {
+            console.error("❌ Failed to load market movers:", err);
+        });
+});
+</script>
     
 </body>
 </html>
