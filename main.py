@@ -154,7 +154,11 @@ def get_market_movers(n=20):
         return market_movers_cache["data"]
 
     universe = get_sp500_symbols()
-    data = yf.download(universe, period="2d", group_by="ticker", threads=True, progress=False)
+    try:
+        data = yf.download(universe, period="2d", group_by="ticker", threads=True, progress=False)
+    except Exception as e:
+        print("Download failed:", e)
+        return {"gainers": [], "losers": []}
 
     movers = []
     for sym in universe:
@@ -174,11 +178,12 @@ def get_market_movers(n=20):
         except Exception:
             continue
 
-    # Sort and select top n
+    if not movers:
+        return {"gainers": [], "losers": []}
+
     gainers = sorted(movers, key=lambda x: x["change_percent"], reverse=True)[:n]
     losers = sorted(movers, key=lambda x: x["change_percent"])[:n]
 
-    # Fetch info only for top gainers/losers
     for stock in gainers + losers:
         try:
             info = yf.Ticker(stock["symbol"]).info
