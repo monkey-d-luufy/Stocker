@@ -149,46 +149,60 @@ def get_trending_stocks():
 
     return trending_stocks
 
-def get_market_movers(n=20):
+def get_market_movers(n=20, batch_size=50):
+    """
+    Returns top n gainers and top n losers for S&P 500 tickers.
+    Fetches in batches to reduce memory usage.
+    """
     global market_movers_cache
     current_time = time.time()
 
+    # Return cached data if still valid
     if market_movers_cache["data"] and (current_time - market_movers_cache["timestamp"] < CACHE_DURATION):
         return market_movers_cache["data"]
 
     movers = []
-
-    # Fetch in batches to avoid timeouts
-    batch_size = 50
+    # Process tickers in batches
     for i in range(0, len(sp500_universe), batch_size):
         batch = sp500_universe[i:i+batch_size]
-        tickers = yf.Tickers(' '.join(batch))
+        try:
+            tickers_data = yf.Tickers(" ".join(batch))
+        except Exception as e:
+            print(f"Error fetching batch {i}-{i+batch_size}: {e}")
+            continue
 
         for sym in batch:
             try:
-                info = tickers.tickers[sym].info
+                info = tickers_data.tickers[sym].info
                 price = info.get("regularMarketPrice")
                 prev_close = info.get("previousClose")
                 if price and prev_close:
                     change_percent = (price - prev_close) / prev_close * 100
                     change = price - prev_close
+                    market_cap_raw = info.get("marketCap", 0)
+                    market_cap = f"{market_cap_raw:,}" if market_cap_raw else "N/A"
+
                     movers.append({
                         "symbol": sym,
                         "name": info.get("longName", sym),
                         "price": round(price, 2),
                         "change": round(change, 2),
                         "change_percent": f"{change_percent:+.2f}%",
+                        "volume": info.get("volume", 0),
+                        "market_cap": market_cap,
+                        "sector": info.get("sector", "N/A")
                     })
-            except Exception:
-                continue  # skip tickers with errors
+            except Exception as e:
+                print(f"Error fetching {sym}: {e}")
 
-    # Sort gainers and losers
-    gainers = sorted(movers, key=lambda x: float(x["change_percent"].replace('%', '')), reverse=True)[:n]
-    losers = sorted(movers, key=lambda x: float(x["change_percent"].replace('%', '')))[:n]
+    # Sort movers
+    gainers = sorted(movers, key=lambda x: float(x["change_percent"].replace('%','')), reverse=True)[:n]
+    losers = sorted(movers, key=lambda x: float(x["change_percent"].replace('%','')))[:n]
 
     result = {"gainers": gainers, "losers": losers}
     market_movers_cache["data"] = result
     market_movers_cache["timestamp"] = current_time
+
     return result
     
 def get_exchange_data():
