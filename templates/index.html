@@ -1429,71 +1429,40 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-    const topGainersContainer = document.getElementById("topGainers");
-    const topLosersContainer = document.getElementById("topLosers");
+    const topGainers = document.getElementById("topGainers");
+    const topLosers = document.getElementById("topLosers");
 
-    fetch('/api/market-movers')
-        .then(response => response.json())
+    fetch("/api/market-movers")
+        .then(res => res.json())
         .then(data => {
-            const movers = data.market_movers;
-
-            // Clear existing content
-            topGainersContainer.innerHTML = "";
-            topLosersContainer.innerHTML = "";
-
-            // Populate gainers
-            movers.gainers.forEach(stock => {
+            topGainers.innerHTML = "";
+            data.gainers.forEach(stock => {
                 const card = document.createElement("div");
-                card.className = "mover-card gainer-card";
-                card.onclick = () => goToStockDetail(stock.symbol);
-
+                card.className = "mover-card";
                 card.innerHTML = `
-                    <div class="mover-header">
-                        <span class="mover-symbol">${stock.symbol}</span>
-                        <span class="mover-price">$${stock.price}</span>
-                    </div>
-                    <div class="mover-name">${stock.name}</div>
-                    <div class="mover-change positive">
-                        ${stock.change} (${stock.change_percent})
-                    </div>
-                    <div class="mover-details">
-                        <div><strong>Volume:</strong> ${stock.volume.toLocaleString()}</div>
-                        <div><strong>Market Cap:</strong> ${stock.market_cap}</div>
-                        <div><strong>Sector:</strong> ${stock.sector}</div>
-                    </div>
+                    <div class="mover-symbol">${stock.symbol}</div>
+                    <div class="mover-price">$${stock.price}</div>
+                    <div class="mover-change ${stock.change >= 0 ? 'positive' : 'negative'}">${stock.change_percent}</div>
                 `;
-                topGainersContainer.appendChild(card);
+                topGainers.appendChild(card);
             });
 
-            // Populate losers
-            movers.losers.forEach(stock => {
+            topLosers.innerHTML = "";
+            data.losers.forEach(stock => {
                 const card = document.createElement("div");
-                card.className = "mover-card loser-card";
-                card.onclick = () => goToStockDetail(stock.symbol);
-
+                card.className = "mover-card";
                 card.innerHTML = `
-                    <div class="mover-header">
-                        <span class="mover-symbol">${stock.symbol}</span>
-                        <span class="mover-price">$${stock.price}</span>
-                    </div>
-                    <div class="mover-name">${stock.name}</div>
-                    <div class="mover-change negative">
-                        ${stock.change} (${stock.change_percent})
-                    </div>
-                    <div class="mover-details">
-                        <div><strong>Volume:</strong> ${stock.volume.toLocaleString()}</div>
-                        <div><strong>Market Cap:</strong> ${stock.market_cap}</div>
-                        <div><strong>Sector:</strong> ${stock.sector}</div>
-                    </div>
+                    <div class="mover-symbol">${stock.symbol}</div>
+                    <div class="mover-price">$${stock.price}</div>
+                    <div class="mover-change ${stock.change >= 0 ? 'positive' : 'negative'}">${stock.change_percent}</div>
                 `;
-                topLosersContainer.appendChild(card);
+                topLosers.appendChild(card);
             });
         })
-        .catch(err => {
-            console.error("❌ Failed to load market movers:", err);
-        });
+        .catch(err => console.error("Error loading market movers:", err));
 });
 </script>
+
     
 </body>
 </html>
