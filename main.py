@@ -29,9 +29,8 @@ AI_API_KEY = os.getenv("AI_API_KEY", "")  # Set this in Secrets
 
 def get_sp500_tickers():
     url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-    table = pd.read_html(url)[0]   # first table on the page
-    tickers = table['Symbol'].tolist()
-    return tickers
+    table = pd.read_html(url, flavor="lxml")[0]
+    return table['Symbol'].tolist()
 
 # 2️⃣ Fetch the tickers once
 sp500_universe = get_sp500_tickers()
@@ -151,73 +150,45 @@ def get_trending_stocks():
     return trending_stocks
 
 def get_market_movers(n=20):
-    """
-    Efficiently returns top n gainers and losers for S&P 500 tickers.
-    Only fetches minimal data for all tickers, then enriches top N with info.
-    """
     global market_movers_cache
     current_time = time.time()
 
-    # Return cached data if still valid
     if market_movers_cache["data"] and (current_time - market_movers_cache["timestamp"] < CACHE_DURATION):
         return market_movers_cache["data"]
 
-    # Step 1: Fetch only recent close prices for all tickers
-    try:
-        data = yf.download(
-            tickers=sp500_universe,
-            period="2d",
-            interval="1d",
-            group_by='ticker',
-            threads=True,
-            progress=False
-        )
-    except Exception as e:
-        print("Error fetching price data:", e)
-        return {"gainers": [], "losers": []}
-
     movers = []
-    for sym in sp500_universe:
-        try:
-            close_prices = data[sym]["Close"]
-            if len(close_prices) >= 2:
-                prev_close = close_prices[-2]
-                price = close_prices[-1]
-                change = price - prev_close
-                change_percent = (change / prev_close) * 100
 
-                movers.append({
-                    "symbol": sym,
-                    "price": round(price, 2),
-                    "change": round(change, 2),
-                    "change_percent": change_percent
-                })
-        except Exception:
-            continue  # skip tickers with missing data
+    # Fetch in batches to avoid timeouts
+    batch_size = 50
+    for i in range(0, len(sp500_universe), batch_size):
+        batch = sp500_universe[i:i+batch_size]
+        tickers = yf.Tickers(' '.join(batch))
 
-    # Step 2: Sort to find top gainers and losers
-    gainers = sorted(movers, key=lambda x: x["change_percent"], reverse=True)[:n]
-    losers = sorted(movers, key=lambda x: x["change_percent"])[:n]
+        for sym in batch:
+            try:
+                info = tickers.tickers[sym].info
+                price = info.get("regularMarketPrice")
+                prev_close = info.get("previousClose")
+                if price and prev_close:
+                    change_percent = (price - prev_close) / prev_close * 100
+                    change = price - prev_close
+                    movers.append({
+                        "symbol": sym,
+                        "name": info.get("longName", sym),
+                        "price": round(price, 2),
+                        "change": round(change, 2),
+                        "change_percent": f"{change_percent:+.2f}%",
+                    })
+            except Exception:
+                continue  # skip tickers with errors
 
-    # Step 3: Fetch detailed info for top gainers/losers only
-    for stock in gainers + losers:
-        try:
-            info = yf.Ticker(stock["symbol"]).info
-            stock["name"] = info.get("longName", stock["symbol"])
-            market_cap_raw = info.get("marketCap", 0)
-            stock["market_cap"] = f"{market_cap_raw:,}" if market_cap_raw else "N/A"
-            stock["volume"] = info.get("volume", 0)
-        except Exception:
-            stock["name"] = stock["symbol"]
-            stock["market_cap"] = "N/A"
-            stock["volume"] = 0
+    # Sort gainers and losers
+    gainers = sorted(movers, key=lambda x: float(x["change_percent"].replace('%', '')), reverse=True)[:n]
+    losers = sorted(movers, key=lambda x: float(x["change_percent"].replace('%', '')))[:n]
 
     result = {"gainers": gainers, "losers": losers}
-
-    # Update cache
     market_movers_cache["data"] = result
     market_movers_cache["timestamp"] = current_time
-
     return result
     
 def get_exchange_data():
@@ -555,13 +526,10 @@ def get_trending():
 
     return jsonify({"trending_stocks": trending_data})
         
-@app.route('/api/market-movers')
-def get_market_movers_api():
-    movers = get_market_movers(n=20)  # top 20 gainers/losers
-    return jsonify({
-        "market_movers": movers,
-        "timestamp": datetime.now().isoformat()
-    })
+@app.route("/api/market-movers")
+def api_market_movers():
+    movers = get_market_movers()
+    return jsonify(movers)
 
 @app.route('/api/exchanges')
 def get_exchanges_api():
